@@ -25,44 +25,13 @@
 <meta property="og:site_name" content="Epiphany&#39;s blog">
 <meta property="og:description" content="本文首发于奇安信攻防社区:https:&#x2F;&#x2F;forum.butian.net&#x2F;share&#x2F;1678  0x00 前言初次分析虚拟机逃逸，之前分析了一篇rwctf2018，这次视线转到强网杯的一个虚拟机逃逸分析。难度比rw大一点点，但是逆向分析还是重点，所以也不会差到哪里去。 一些有关基础的链接放在这里，不做赘述。 题解 RPC&#x2F;backdoor机制 0x01 分析bindiff这类题目都">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-89eec2810b186d524efda555894cca9031ad35e7.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-18b396ee70885b34dc4b57846efde51baa0d1a1f.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b9b1beba56c3803f31e032d2c8476ce9c7d9fda8.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a25862dfd05d6be26c03539e4ccba81caefc64ab.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-2c772477f3bc5dde104c35b1d042d567f8c8da28.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-1f4c153972dee2b077f41122e57c31023c87979c.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-4ac942da8b78bba6ed812cf7878a8b0b70561da5.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-3612cc7def195cc1c26ad8199975b01b1c452eb0.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-38b67aa4103d4bfdb748b0cab800ba051690af6b.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-ac0faf0ad5f12e77c733f85edc1914098b407865.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-36a2bba083009f75ce800f244312c2430730e108.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b5ba2447ff1d948dcf05d645861baddbc9ae0718.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-163cb20a6e28b6d9bce90892deae335522c69b65.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-9589e548acbe430d797a4b712db305520f4cd8bd.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-5554b4d6edff9e2280409f6bd2c8cd2c86fea21f.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-4b9fefc7745ee94ae07cccc09bfdcb91cf0fb928.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-d6ac75d5867ddf6d2826a4909d4a23d798ecc4e9.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a5dfc228eaf5bbe1046ff8828591417ae8e7d130.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-cf4ca0bca038198b936f068479e3d7c86b304719.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-6101b8e1bf488c5b22fc638bf5ee6759f7e47d59.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-c15bb21f3a9a8d61cee8d1679228e3378e2a5c53.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-5f6609f03fbf2c05e9a32233dda512666ac8401a.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-558cbd15fff8d78e9d81193abbc1855318dc2976.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-af593aa4f5b88482d210904f17b6bbbdca1fff56.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-cf83f7ba2ba709b640e4e31c373f2f4ce8374f6e.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-90ca8fba0d3563f28628ce7e637ba491a0af2167.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-3af68edeb6ac636b641ed4f28699a57cf02635d0.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-fbcde0816cf86bb685d83ddcd650d26b20807683.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b5c0c0dd42f4ab7ab018faf0a5ff2962d73667f5.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-08e8e166fe38c1669ae4f225b82c46399d34c220.png">
-<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-babc2811b8fd15b84ebcde28aab4e8a3ad4d017e.png">
 <meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b49b8f237dd3d59e57968a503942f5b52a884c87.png">
 <meta property="article:published_time" content="2022-06-21T16:43:07.000Z">
-<meta property="article:modified_time" content="2022-06-21T16:50:56.096Z">
+<meta property="article:modified_time" content="2022-06-21T17:01:27.889Z">
 <meta property="article:author" content="Epiphany">
-<meta property="article:tag" content="CTF">
+<meta property="article:tag" content="realworld">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-89eec2810b186d524efda555894cca9031ad35e7.png">
+<meta name="twitter:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b49b8f237dd3d59e57968a503942f5b52a884c87.png">
   
   
   
@@ -182,7 +151,7 @@
                   
                   
                   
-                  <a class="dropdown-item" target="_blank" rel="noopener" href="https://hexo.fluid-dev.com/">
+                  <a class="dropdown-item" href="/archives/ctf">
                     
                     CTF
                   </a>
@@ -190,7 +159,7 @@
                   
                   
                   
-                  <a class="dropdown-item" target="_blank" rel="noopener" href="https://hexo.fluid-dev.com/">
+                  <a class="dropdown-item" href="/archives/cve">
                     
                     CVE
                   </a>
@@ -198,7 +167,7 @@
                   
                   
                   
-                  <a class="dropdown-item" target="_blank" rel="noopener" href="https://hexo.fluid-dev.com/">
+                  <a class="dropdown-item" href="/archives/chats">
                     
                     chats
                   </a>
@@ -253,7 +222,7 @@
   
 
 <div id="banner" class="banner" parallax=true
-     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+     style="background: url('https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b49b8f237dd3d59e57968a503942f5b52a884c87.png') no-repeat center center; background-size: cover;">
   <div class="full-bg-img">
     <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
       <div class="banner-text text-center fade-in-up">
@@ -450,11 +419,32 @@
             <div>
               <div class="post-metas my-3">
   
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/CTF/" class="category-chain-item">CTF</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
   
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/CTF/">#CTF</a>
+        <a href="/tags/realworld/">#realworld</a>
       
     </div>
   
