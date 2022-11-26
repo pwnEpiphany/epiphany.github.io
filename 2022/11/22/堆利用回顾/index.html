@@ -1,0 +1,1169 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/head.png">
+  <link rel="icon" href="/img/head.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Epiphany">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="😄堆上的知识好像都不记得了，专门做总结回顾一下，以后再回来看就没必要重新开始学习。 basic 几种bins的进入退出方式   fastbin： FILO，从头部插入和取出   unsorted bin： FIFO，从头部插入，从尾部取出   tcache： LIFO，从头部插入，头部取出   mmap函数分配的映射空间和malloc分配的空间不一样，有一个要注意的地方是，mmap出来的地址和l">
+<meta property="og:type" content="article">
+<meta property="og:title" content="堆利用回顾">
+<meta property="og:url" content="http://example.com/2022/11/22/%E5%A0%86%E5%88%A9%E7%94%A8%E5%9B%9E%E9%A1%BE/index.html">
+<meta property="og:site_name" content="Epiphany&#39;s blog">
+<meta property="og:description" content="😄堆上的知识好像都不记得了，专门做总结回顾一下，以后再回来看就没必要重新开始学习。 basic 几种bins的进入退出方式   fastbin： FILO，从头部插入和取出   unsorted bin： FIFO，从头部插入，从尾部取出   tcache： LIFO，从头部插入，头部取出   mmap函数分配的映射空间和malloc分配的空间不一样，有一个要注意的地方是，mmap出来的地址和l">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/image-20221122215109112.png">
+<meta property="article:published_time" content="2022-11-22T00:30:58.000Z">
+<meta property="article:modified_time" content="2022-11-26T00:19:54.131Z">
+<meta property="article:author" content="Epiphany">
+<meta property="article:tag" content="heap">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/image-20221122215109112.png">
+  
+  
+  
+  <title>堆利用回顾 - Epiphany&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/test.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":70,"cursorChar":"😊","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"syTAHbVDGa0ZSug10p7Z9QM4-gzGzoHsz","app_key":"BDZY8j2r1l97VE3uLcsrU2Vd","server_url":"https://sytahbvd.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Epiphany&#39;s blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" target="_self" href="javascript:;" role="button"
+                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CTF">
+                    
+                    CTF
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CVE">
+                    
+                    CVE
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/others">
+                    
+                    others
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/chats">
+                    
+                    chats
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/image-20221122215109112.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="堆利用回顾"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-22 08:30" pubdate>
+          星期二, 十一月 22日 2022, 8:30 早上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          16k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          131 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">堆利用回顾</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>😄堆上的知识好像都不记得了，专门做总结回顾一下，以后再回来看就没必要重新开始学习。</p>
+<h1>basic</h1>
+<p><strong>几种bins的进入退出方式</strong></p>
+<ul>
+<li>
+<p>fastbin： FILO，从头部插入和取出</p>
+</li>
+<li>
+<p>unsorted bin： FIFO，从头部插入，从尾部取出</p>
+</li>
+<li>
+<p>tcache： LIFO，从头部插入，头部取出</p>
+</li>
+</ul>
+<p><strong>mmap</strong>函数分配的映射空间和malloc分配的空间不一样，有一个要注意的地方是，mmap出来的地址和<strong>libc基址</strong>存在固定的偏移，在leak的时候可以考虑。</p>
+<h2 id="fastbin的一些机制"><a class="header-anchor" href="#fastbin的一些机制">¶</a>fastbin的一些机制</h2>
+<p>首先，fastbin一般情况下不会发生合并，除非触发<code>malloc_consolidate()</code>，当一个堆块加进<code>fast bin</code>的时候，不会检查下一个chunk的<code>prev_inuse</code>，这也意味着，fastbin大小的chunk被使用和释放都不会触发和下一个chunk有关的安全机制。</p>
+<p>但是fastbin在释放的时候会检查自己的size大小，然后放入到合适的fastbin链中，同样的，从fastbin中取出时，也会检查size的大小是否和当前链相符合，这要求后续伪造fastbin chunk的时候注意<code>size</code></p>
+<p><strong>malloc_consolidate</strong>： 当申请一个大于<code>large chunk</code>最小大小之后（包括当申请的<code>chunk</code>需要调用<code>brk()</code>申请新的<code>top chunk</code>或调用<code>mmap()</code>函数时），<strong>触发malloc_consolidate</strong>，程序会将<code>fastbin</code>内的chunk取出，相邻的f<code>ree chunk</code>合并后放入<code>unsorted bin</code>，此时完成了该完成的所有合并之后，寻找之前malloc的large chunk，理论上small bin无法满足需求，于是会遍历<code>unsorted bin</code>，此时<code>unsorted bin</code>将之前合并的<code>chunk</code>完成再分配。</p>
+<p>可以预见到最后的效果是<code>fast bin</code>中的chunk被填入了<code>small bin</code>，或者合并到了unsorted bin，被吞入了<code>top chunk</code>。</p>
+<h2 id="unsorted-bin"><a class="header-anchor" href="#unsorted-bin">¶</a>unsorted bin</h2>
+<p>unsorted bin一般是<code>leak</code>的主要地点，和fast bin不同的是，unsorted bin是一个双向链表，由<code>fd</code>和<code>bk</code>链接，主要还是由<code>bk</code>遍历（源码决定）<code>A&lt;-B&lt;-C</code>进一个<code>D</code>变为<code>D&lt;-A&lt;-B&lt;-C</code>，拿出一个<code>C</code>，变为<code>D&lt;-A&lt;-B</code>。<code>bin</code>中堆块大小可以不同，不排序。</p>
+<p><strong>泄露libc</strong>，这是因为<code>unsorted bin</code>中最先进来的chunk，其中<code>fd</code>和<code>bk</code>都指向<code>bin</code>，而这个<code>bin</code>，存在于<code>main_arena</code>的结构体中，在64位低版本的libc中，一般是<code>&lt;main_arena+88&gt;</code>，版本稍微高一点就在<code>&lt;main_arena+96&gt;</code>，一般泄露libc都会利用这个地址。</p>
+<p>同时main_arena的地址和malloc_hook很近，即<code>malloc_hook+0x10=main_arena</code></p>
+<h2 id="large-bin"><a class="header-anchor" href="#large-bin">¶</a>large bin</h2>
+<p>这是一个重点，在现在高版本的libc中，几乎都是用large bin attack加上其他的手法攻击，large bin是双链表维护，但是维护的方式有点特别，不再是单一的链表管理，而是分块管理。large bin 以前学习的也不多，下面做一个详细的基础介绍</p>
+<p>基本的理解可以理解为横向和纵向链接，从空间上来类比基本上是一个网状结构，但是又不完全是网状，<strong>一条绳子上一个区域内大小的chunk通过fd_nextsize和bk_nextsize连接在一起，相同大小的chunk又通过fd和bk相链接</strong></p>
+<p>在观察如何取出和存入chunk的时候不妨看一段源码</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c">            <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">in_largebin_range</span> <span class="token punctuation">(</span>size<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">//判断是否属于largebin  </span>
+            <span class="token punctuation">&#123;</span>  
+              victim_index <span class="token operator">=</span> <span class="token function">largebin_index</span> <span class="token punctuation">(</span>size<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//寻找当前size在largebin中的  </span>
+              bck <span class="token operator">=</span> <span class="token function">bin_at</span> <span class="token punctuation">(</span>av<span class="token punctuation">,</span> victim_index<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//寻找main_arena  </span>
+              fwd <span class="token operator">=</span> bck<span class="token operator">-></span>fd<span class="token punctuation">;</span><span class="token comment">//size最大的chunk的地址  </span>
+   
+              <span class="token comment">/* maintain large bins in sorted order */</span>  
+              <span class="token keyword">if</span> <span class="token punctuation">(</span>fwd <span class="token operator">!=</span> bck<span class="token punctuation">)</span> <span class="token comment">//如果表不为空  </span>
+                <span class="token punctuation">&#123;</span>  
+                  <span class="token comment">/* Or with inuse bit to speed comparisons */</span>  
+                  size <span class="token operator">|=</span> PREV_INUSE<span class="token punctuation">;</span>  
+                  <span class="token comment">/* if smaller than smallest, bypass loop below */</span>  
+                  <span class="token function">assert</span> <span class="token punctuation">(</span><span class="token function">chunk_main_arena</span> <span class="token punctuation">(</span>bck<span class="token operator">-></span>bk<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+                  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>size<span class="token punctuation">)</span>  
+ <span class="token operator">&lt;</span> <span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token punctuation">)</span> <span class="token function">chunksize_nomask</span><span class="token punctuation">(</span>bck<span class="token operator">-></span>bk<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token comment">//bck->bk是当前最小的chunk，如果size比它还小，那么直接插入到表尾  </span>
+                    <span class="token punctuation">&#123;</span>  
+                      fwd <span class="token operator">=</span> bck<span class="token punctuation">;</span><span class="token comment">//感觉这个不符合我自己的编码习惯，如果我写我肯定fwd=bck->fd，也好理解一些  </span>
+                      bck <span class="token operator">=</span> bck<span class="token operator">-></span>bk<span class="token punctuation">;</span>  
+   
+                      victim<span class="token operator">-></span>fd_nextsize <span class="token operator">=</span> fwd<span class="token operator">-></span>fd<span class="token punctuation">;</span>  
+                      victim<span class="token operator">-></span>bk_nextsize <span class="token operator">=</span> fwd<span class="token operator">-></span>fd<span class="token operator">-></span>bk_nextsize<span class="token punctuation">;</span>  
+                      fwd<span class="token operator">-></span>fd<span class="token operator">-></span>bk_nextsize <span class="token operator">=</span> victim<span class="token operator">-></span>bk_nextsize<span class="token operator">-></span>fd_nextsize <span class="token operator">=</span> victim<span class="token punctuation">;</span>  
+<span class="token comment">//总的来说，就是链表的插入操作  </span>
+                    <span class="token punctuation">&#125;</span>  
+                  <span class="token keyword">else</span><span class="token comment">//如果不是最小，那就由小到大找到第一个比它小的插在它的前面  </span>
+                    <span class="token punctuation">&#123;</span>  
+                      <span class="token function">assert</span> <span class="token punctuation">(</span><span class="token function">chunk_main_arena</span> <span class="token punctuation">(</span>fwd<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+                      <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token punctuation">)</span> size <span class="token operator">&lt;</span> <span class="token function">chunksize_nomask</span> <span class="token punctuation">(</span>fwd<span class="token punctuation">)</span><span class="token punctuation">)</span>  
+                        <span class="token punctuation">&#123;</span>  
+                          fwd <span class="token operator">=</span> fwd<span class="token operator">-></span>fd_nextsize<span class="token punctuation">;</span>  
+              <span class="token function">assert</span> <span class="token punctuation">(</span><span class="token function">chunk_main_arena</span> <span class="token punctuation">(</span>fwd<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+                        <span class="token punctuation">&#125;</span>  
+   
+                      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token punctuation">)</span> size  
+              <span class="token operator">==</span> <span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token punctuation">)</span> <span class="token function">chunksize_nomask</span> <span class="token punctuation">(</span>fwd<span class="token punctuation">)</span><span class="token punctuation">)</span>  
+                        <span class="token comment">/* Always insert in the second position.  */</span>  
+                        fwd <span class="token operator">=</span> fwd<span class="token operator">-></span>fd<span class="token punctuation">;</span><span class="token comment">//如果说是已经存在相同大小的chunk，就纵向插入  </span>
+                      <span class="token keyword">else</span>  
+                        <span class="token punctuation">&#123;</span>  
+                          victim<span class="token operator">-></span>fd_nextsize <span class="token operator">=</span> fwd<span class="token punctuation">;</span>  
+                          victim<span class="token operator">-></span>bk_nextsize <span class="token operator">=</span> fwd<span class="token operator">-></span>bk_nextsize<span class="token punctuation">;</span>  
+                          <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">__glibc_unlikely</span> <span class="token punctuation">(</span>fwd<span class="token operator">-></span>bk_nextsize<span class="token operator">-></span>fd_nextsize <span class="token operator">!=</span> fwd<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token comment">//这个检查好像和unlink一样，都是检查fwd的指针有没有被恶意修改  </span>
+                            <span class="token function">malloc_printerr</span> <span class="token punctuation">(</span><span class="token string">"malloc(): largebin double linked list corrupted (nextsize)"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+                          fwd<span class="token operator">-></span>bk_nextsize <span class="token operator">=</span> victim<span class="token punctuation">;</span>  
+                          victim<span class="token operator">-></span>bk_nextsize<span class="token operator">-></span>fd_nextsize <span class="token operator">=</span> victim<span class="token punctuation">;</span>  
+                        <span class="token punctuation">&#125;</span>  
+                      bck <span class="token operator">=</span> fwd<span class="token operator">-></span>bk<span class="token punctuation">;</span><span class="token comment">//这里的bck是用来纵向插入的  </span>
+                      <span class="token keyword">if</span> <span class="token punctuation">(</span>bck<span class="token operator">-></span>fd <span class="token operator">!=</span> fwd<span class="token punctuation">)</span>  
+                        <span class="token function">malloc_printerr</span> <span class="token punctuation">(</span><span class="token string">"malloc(): largebin double linked list corrupted (bk)"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//同样是纵向检查指针有没有被恶意修改  </span>
+                    <span class="token punctuation">&#125;</span>  
+                <span class="token punctuation">&#125;</span>  
+              <span class="token keyword">else</span>  
+                victim<span class="token operator">-></span>fd_nextsize <span class="token operator">=</span> victim<span class="token operator">-></span>bk_nextsize <span class="token operator">=</span> victim<span class="token punctuation">;</span><span class="token comment">//如果表为空，那么指针自指  </span>
+            <span class="token punctuation">&#125;</span>  
+   
+          <span class="token function">mark_bin</span> <span class="token punctuation">(</span>av<span class="token punctuation">,</span> victim_index<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+          victim<span class="token operator">-></span>bk <span class="token operator">=</span> bck<span class="token punctuation">;</span>  
+          victim<span class="token operator">-></span>fd <span class="token operator">=</span> fwd<span class="token punctuation">;</span>  
+          fwd<span class="token operator">-></span>bk <span class="token operator">=</span> victim<span class="token punctuation">;</span>  
+          bck<span class="token operator">-></span>fd <span class="token operator">=</span> victim<span class="token punctuation">;</span><span class="token comment">//不管到底有没有重复，都进行一次纵向链接，保证一些指针为NULL</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>从代码中可以看出，fastbin 链接是从大到小开始排列。</p>
+<h3 id="如何插入chunk"><a class="header-anchor" href="#如何插入chunk">¶</a>如何插入chunk</h3>
+<ul>
+<li>寻找index，即寻找在哪一条绳子上</li>
+<li>有了index之后，首先判空，如果链表为空则<br>
+<code>victim-&gt;fd_nextsize = victim-&gt;bk_nextsize = victim;</code>自己指向自己</li>
+<li>之后判断size，是否比最小的chunk还要小，如果比最小的还要小，那么直接插入到链表的末尾</li>
+</ul>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c">fwd <span class="token operator">=</span> bck<span class="token punctuation">;</span>  
+bck <span class="token operator">=</span> bck<span class="token operator">-></span>bk<span class="token punctuation">;</span>  
+
+victim<span class="token operator">-></span>fd_nextsize <span class="token operator">=</span> fwd<span class="token operator">-></span>fd<span class="token punctuation">;</span>  
+victim<span class="token operator">-></span>bk_nextsize <span class="token operator">=</span> fwd<span class="token operator">-></span>fd<span class="token operator">-></span>bk_nextsize<span class="token punctuation">;</span>  
+fwd<span class="token operator">-></span>fd<span class="token operator">-></span>bk_nextsize <span class="token operator">=</span> victim<span class="token operator">-></span>bk_nextsize<span class="token operator">-></span>fd_nextsize <span class="token operator">=</span> victim<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这里完成前两步的赋值之后，fwd就是bin，可以发现就是把victim插入到链表的末尾。</p>
+<ul>
+<li>如果不是最小的，<strong>那么从大到小开始遍历</strong>
+<ul>
+<li>如果找到一样大小的，则使用头插法，插入目标链表</li>
+<li>如果没有一样大小的，在中间插入即可<br>
+此时，又fwd的内存检测，检测和<code>unlink</code>差不多<br>
+值得注意的是，最后一段赋值的代码，每一种情况都会执行</li>
+</ul>
+</li>
+</ul>
+<h3 id="取出chunk"><a class="header-anchor" href="#取出chunk">¶</a>取出chunk</h3>
+<p>这里默认能够从largebin中取出。先找到相应的index，在index中从小到大遍历堆块，找到第一个比所需大小大（或等于）的堆块。然后unlink，和其它的bins一样，存在着对fd，bk，fd_nextsize以及bk_nextsize的检测。对取下的chunk如果大小不等于申请的size，那就存在着切割操作。如果剩余大小大于MINSIZE。则返还给unsorted bin，否则一并给用户。</p>
+<h3 id="tcache"><a class="header-anchor" href="#tcache">¶</a>tcache</h3>
+<p>这也是2.26版之后出现的管理机制，从某种程度上来说，管理的安全性能不如fastbin，但是速度确实提升了。</p>
+<ul>
+<li>
+<p><code>tcache_perthread_struct</code>是一个管理Tcache的结构体，这个结构体也作为一个大的chunk，存在于heap的开始位置，libc2.27该chunk的大小为0x250，后面增加到了0x290，<code>tcache bin</code>的信息都由该chunk存储，<strong>劫持</strong>这个chunk可以控制tcache bin的所有情况。</p>
+</li>
+<li>
+<p>从<code>fastbin</code> 和 <code>smallbin</code>中拿出chunk之后，剩下的chunk全部都会滑入tcache</p>
+</li>
+<li>
+<p>在<code>__libc_malloc()</code>调用<code>__int_malloc()</code>之前，如果<code>tcache bin</code>中有符合要求的<code>chunk</code>就直接将其返回。</p>
+</li>
+<li>
+<p><code>calloc()</code>越过<code>tcache</code>取<code>chunk</code>，通过<code>calloc()</code>分配的堆块会<strong>清零</strong>。<strong>补充：</strong><code>realloc()</code>的特殊用法：<code>size == 0</code>时，等同于<code>free</code>；<code>realloc_ptr == 0 &amp;&amp; size &gt; 0</code> 时等同于<code>malloc</code>。如果当前连续内存块足够<code>realloc</code>的话，只是将<code>p</code>所指向的空间扩大，并返回<code>p</code>的指针地址；如果当前连续内存块不够，则再找一个足够大的地方，分配一块新的内存<code>q</code>，并将<code>p</code>指向的内容<code>copy</code>到<code>q</code>，返回 <code>q</code>。并将<code>p</code>所指向的内存空间<code>free</code>；若是通过<code>realloc</code>缩小堆块，则返回的指针<code>p</code>不变，但原先相比缩小后多余的那部分将会被<code>free</code>掉。</p>
+</li>
+</ul>
+<p>在libc版本的迭代中，tcache也有很多的保护机制的更新，后面会在具体的利用中提到</p>
+<h3 id="topchunk"><a class="header-anchor" href="#topchunk">¶</a>topchunk</h3>
+<p>topchunk的利用较少，几乎只有一个<code>house of force</code>，除此之外还有一些小trick</p>
+<blockquote>
+<p>当申请的<code>size</code>不大于<code>mmap</code>的阈值，但<code>top chunk</code>当前的大小又不足以分配，则会扩展<code>top chunk</code>，然后从新<code>top chunk</code>里进行分配。</p>
+</blockquote>
+<p>但是，当申请的size大于topchunk的时候，不一定会直接扩展topchunk的大小，而是free原来的topchunk，然后再malloc一块新的topchunk，这种机制再house of orange中被用到，常用于程序中没有free的机会。</p>
+<p>具体是，如果<code>brk</code>等于该不够大小的<code>top chunk</code>（被记作<code>old_top_chunk</code>）的<code>end</code>位置（<code>old_end</code>，等于<code>old_top + old_size</code>），即<code>top chunk</code>的<code>size</code>并没有被修改，完全是自然地分配堆块，导致了<code>top chunk</code>不够用，则会从<code>old_top</code>处开辟更大的一块空间作为新的<code>top chunk</code>，也就是将原先的<code>old_top_chunk</code>进行扩展了，此时没有<code>free</code>，且<code>top chunk</code>的起始位置也没有改变，但是如果<code>brk</code>不等于<code>old_end</code>，则会先<code>free</code>掉<code>old_top_chunk</code>，再从<code>brk</code>处开辟一片空间作为<code>new_top_chunk</code>，此时的<code>top chunk</code>头部位置变为了原先的<code>brk</code>，而如今的<code>brk</code>也做了相应的扩展，并且<code>unsorted bin</code>或<code>tcache</code>中（一般修改的大小都至少会是<code>small bin</code>范围，但具体在哪得分情况看）会有被<code>free</code>的<code>old_top_chunk</code>。 因此，可以通过改小<code>top chunk</code>的<code>size</code>，再申请大堆块，做到对旧<code>top chunk</code>的<code>free</code>，不过修改的<code>size</code>需要绕过一些检测。 相关源码如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c">old_top <span class="token operator">=</span> av<span class="token operator">-></span>top<span class="token punctuation">;</span>  
+old_size <span class="token operator">=</span> <span class="token function">chunksize</span> <span class="token punctuation">(</span>old_top<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+old_end <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token function">chunk_at_offset</span> <span class="token punctuation">(</span>old_top<span class="token punctuation">,</span> old_size<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// old_end = old_top + old_size  </span>
+<span class="token function">assert</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>old_top <span class="token operator">==</span> <span class="token function">initial_top</span> <span class="token punctuation">(</span>av<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> old_size <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">||</span>  
+        <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>old_size<span class="token punctuation">)</span> <span class="token operator">>=</span> MINSIZE <span class="token operator">&amp;&amp;</span>  
+         <span class="token function">prev_inuse</span> <span class="token punctuation">(</span>old_top<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span>  
+         <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">long</span><span class="token punctuation">)</span> old_end <span class="token operator">&amp;</span> <span class="token punctuation">(</span>pagesize <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>需要绕过以上的断言，主要就是要求被修改的<code>top chunk</code>的<code>size</code>的<code>prev_inuse</code>位要为<code>1</code>并且<code>old_end</code>要内存页对齐，所以就要求被修改的<code>size</code>的后三位和原先要保持一致。</p>
+<h1>Vulnerable &amp; exploit</h1>
+<p>下面是总结一些漏洞出现的情况和利用方式</p>
+<p>目前来看，漏洞出现的模式就只有四种：</p>
+<ol>
+<li>
+<p>溢出，朴实无华的溢出</p>
+</li>
+<li>
+<p>特殊的溢出，即off_by_one</p>
+</li>
+<li>
+<p>UAF，代码编写上的bug</p>
+</li>
+<li>
+<p>堆风水</p>
+</li>
+</ol>
+<p>在漏洞利用上面，先不考虑漏洞的类型，从堆漏洞到rce的过程中，最核心的几个步骤就是能够leak，leak之后能够劫持chunk的分配，即通过漏洞获得任意地址写，修改hook或者IO，获得shell</p>
+<p>把漏洞和利用的目的结合在一起看，似乎更能够看到其中的联系</p>
+<h2 id="leak"><a class="header-anchor" href="#leak">¶</a>leak?</h2>
+<p>泄露的方法有点单调，在早期无非就是unsorted bin，通过UAF或者别的方法，获得unsorted bin中的指针，从而泄露出main_arena的地址，后面则还可以通过IO的劫持来达到目标。</p>
+<p>先说劫持<code>unsorted bin</code>中的指针，其中有一点是，在某个版本之前，unsorted bin中的chunk取出来的时候不会消除其中残留的指针，所以很简单的<code>free malloc</code>就可以获得libc的基址</p>
+<p><img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/image-20221122210635583.png" srcset="/img/loading.gif" lazyload alt="image-20221122210635583"></p>
+<p>这种方法看起来简单，但是实际上运用的比较少，毕竟这么简单的机会，总有些限制条件给pass掉的。一般能够利用的leak方法和劫持都是相通的，在没有直接UAF的条件下，构造出来<code>chunk overlap</code>即一个chunk同时处在unsorted bin和别的位置，这种情况下一般有两个指针，ptr1和ptr2都指向chunk，但是ptr2指向unsorted bin，所以就无法使用，但是可以利用ptr1泄露。</p>
+<p>此外，利用IO进行leak也是比较常见的方法，这种方法多用于没有leak函数的情况，IO的利用这里不多讲，内容比较多，后面单独总结。</p>
+<p>除了libc的基址之外，还有heap的基址，heap的基址leak起来和libc差不多，一般libc的难度比较大，但是不排除前面讲的libc基址直接通过unsorted bin带出来，这种情况下leak heap的地址就要一些特殊的方法。</p>
+<p>观察<code>large bin</code>插入chunk时的源码，可以发现如果插入的位置原来为空，则<code>fd_nextsize</code>和<code>bk_nextsize</code>都指向自己</p>
+<p><img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/image-20221122215109112.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>通过这样的特殊条件可以leak出来heap基址。</p>
+<p>此外，在<code>libc2.32</code>以及以后的版本，会对<code>tcache 的 fd</code>指针做一个特殊的异或保护操作，但是在这种机制下，第一个chunk被链入的时候，可以直接leak出堆地址，这个后面可以详细说。</p>
+<p>总结以上的leak方法，分以下几种情况。（都建立在有leak 函数的条件）</p>
+<ol>
+<li>
+<p>如果可以直接 free malloc带出main_arena的地址，可以直接leak</p>
+</li>
+<li>
+<p>如果以上条件不满足，且漏洞条件为UAF，则直接free之后可以leak</p>
+</li>
+<li>
+<p>如果漏洞不为UAF，则需要考虑别的方法，打一个堆重叠chunk进unsorted bin</p>
+</li>
+</ol>
+<h3 id="利用"><a class="header-anchor" href="#利用">¶</a>利用</h3>
+<p>利用的方法就比较多样化了，但是利用的目标还是不变的，任意地址写或者说任意地址堆分配的权力，再往下细一点就是，需要劫持<code>fd</code>指针，然后再进一步控制程序流程。</p>
+<p>这个时候就会考虑到很多的 保护方法，所以这里主要对各大libc版本的保护方法做一个总结</p>
+<p>关注现在比较主流的，libc2.27开始一直到libc2.34，23版本就不多说了，出现较少，攻击方式实际上也比较单一。</p>
+<h4 id="libc2-27"><a class="header-anchor" href="#libc2-27">¶</a>libc2.27</h4>
+<p>实际上在libc2.27分为两个版本，主要是在2.27中做了一次小更新，修复了<code>tcache</code>的无脑<code>double free</code>，因为在最开始的tcache中没有double free检查，所以遇到题目是2.27的，都可以试一下能不能double free。</p>
+<p>其次，tcache是可以任意地址写的，没有fast bin那种限制size的检查，但同时要注意的是<strong>fd指向的并不是堆头，而是堆内容</strong>，即伪造fd的时候，<code>fd</code>应该直接写到<code>target address</code>，在有<code>tcache</code>的<code>libc</code>发行版中，保护最薄弱的就是2.27了，也没什么好总结的，没有特殊的利用方法，就是很朴素的劫持fd指针，然后任意地址写。</p>
+<p>这里提一个有意的利用方法，这个方法在后续的版本中也适用，但是造成的危害不一样。</p>
+<h5 id="Tcache-Stashing-Unlink-Attack"><a class="header-anchor" href="#Tcache-Stashing-Unlink-Attack">¶</a>Tcache Stashing Unlink Attack</h5>
+<p>这种attack利用的是<code>small bin</code>和tcache的关系，在高版本中还有pro版本。看下面的代码：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token comment">// 获取 small bin 中倒数第二个 chunk 。  </span>
+bck <span class="token operator">=</span> victim<span class="token operator">-></span>bk<span class="token punctuation">;</span>  
+<span class="token comment">// 检查 bck->fd 是不是 victim，防止伪造  </span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">__glibc_unlikely</span><span class="token punctuation">(</span>bck<span class="token operator">-></span>fd <span class="token operator">!=</span> victim<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  
+    errstr <span class="token operator">=</span> <span class="token string">"malloc(): smallbin double linked list corrupted"</span><span class="token punctuation">;</span>  
+    <span class="token keyword">goto</span> errout<span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span>  
+<span class="token comment">// 设置 victim 对应的 inuse 位  </span>
+<span class="token function">set_inuse_bit_at_offset</span><span class="token punctuation">(</span>victim<span class="token punctuation">,</span> nb<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+<span class="token comment">// 修改 small bin 链表，将 small bin 的最后一个 chunk 取出来  </span>
+bin<span class="token operator">-></span>bk <span class="token operator">=</span> bck<span class="token punctuation">;</span>  
+bck<span class="token operator">-></span>fd <span class="token operator">=</span> bin<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这是<code>small bin</code>取出最后一个chunk的操作，可以发现，检查了双链的完整性，但是没有检查bck的合法性。在上面的tcache特性中提到了，从<code>small bin</code>中取出一个chunk之后，剩下的所有chunk会滑入对应大小的<code>tcache bin</code>中，下面看tcache中的代码</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">if</span> <span class="token expression">USE_TCACHE    </span></span>
+      <span class="token comment">/* While we're here, if we see other chunks of the same size,   
+         stash them in the tcache. */</span>    
+      <span class="token class-name">size_t</span> tc_idx <span class="token operator">=</span> <span class="token function">csize2tidx</span> <span class="token punctuation">(</span>nb<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//获取对应size的tcache索引    </span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>tcache <span class="token operator">&amp;&amp;</span> tc_idx <span class="token operator">&lt;</span> mp_<span class="token punctuation">.</span>tcache_bins<span class="token punctuation">)</span> <span class="token comment">//如果该索引在tcache bin范围    </span>
+        <span class="token punctuation">&#123;</span>    
+          mchunkptr tc_victim<span class="token punctuation">;</span>    
+    
+          <span class="token comment">/* While bin not empty and tcache not full, copy chunks over. */</span>    
+          <span class="token keyword">while</span> <span class="token punctuation">(</span>tcache<span class="token operator">-></span>counts<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span> <span class="token operator">&lt;</span> mp_<span class="token punctuation">.</span>tcache_count  <span class="token comment">//当tcache bin不为空并且没满，并且small bin不为空，则依次取最后一个chunk插入到tcache bin里    </span>
+             <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>tc_victim <span class="token operator">=</span> <span class="token function">last</span> <span class="token punctuation">(</span>bin<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> bin<span class="token punctuation">)</span>    
+        <span class="token punctuation">&#123;</span>    
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>tc_victim <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>    
+            <span class="token punctuation">&#123;</span>    
+              bck <span class="token operator">=</span> tc_victim<span class="token operator">-></span>bk<span class="token punctuation">;</span>    
+              <span class="token function">set_inuse_bit_at_offset</span> <span class="token punctuation">(</span>tc_victim<span class="token punctuation">,</span> nb<span class="token punctuation">)</span><span class="token punctuation">;</span>    
+              <span class="token keyword">if</span> <span class="token punctuation">(</span>av <span class="token operator">!=</span> <span class="token operator">&amp;</span>main_arena<span class="token punctuation">)</span>    
+            <span class="token function">set_non_main_arena</span> <span class="token punctuation">(</span>tc_victim<span class="token punctuation">)</span><span class="token punctuation">;</span>    
+              bin<span class="token operator">-></span>bk <span class="token operator">=</span> bck<span class="token punctuation">;</span> <span class="token comment">//将当前chunk从small bin里卸下    </span>
+              bck<span class="token operator">-></span>fd <span class="token operator">=</span> bin<span class="token punctuation">;</span>    
+                      <span class="token comment">//放入tcache bin里    </span>
+              <span class="token function">tcache_put</span> <span class="token punctuation">(</span>tc_victim<span class="token punctuation">,</span> tc_idx<span class="token punctuation">)</span><span class="token punctuation">;</span>    
+                <span class="token punctuation">&#125;</span>    
+        <span class="token punctuation">&#125;</span>    
+        <span class="token punctuation">&#125;</span>    
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span>  </span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这里逻辑比较简单，while循环中，不断的通过<code>tcache_put</code>，把chunk从<code>small bin</code>中转移到tcache中，这个过程没有任何的检查，并且，脱链的时候也没有检查链表的完整性，因为在前面的<code>small bin脱链中</code>已经检查了当时的Victim和bck链表的完整。</p>
+<p><strong>那么可以思考</strong>，如果small bin中存在3个chunk，分别为chunk1 chunk2 chunk3，如果我们可以控制chunk2的bk指针，劫持这个bk到target address，然后执行到<code>bck = tc_victim-&gt;bk;</code>的时候，这个bck是<code>target address</code>，后面执行<code>bck-&gt;fd=bin</code>则往<code>target address+0x10</code>中写入了一个<code>main_arena</code>的地址，并且通过<code>tcache_put</code>能够把<code>victim</code>写入<code>tcache bin</code>中，此外还需要一个条件，就是tcache刚好只留下来了一个位置，这是最理想的，因为理论上分析，如果损坏small bin的bk指针，下一次的操作必然会出现错误，所以最好是能够控制住tcache的count，达到漏洞目标之后停止while循环。</p>
+<p>漏洞危害看起来蛮大，但是有个bug，漏洞需要的前提条件是，从small bin中取出来一个chunk，但是在有tcache的条件下，需要tcache为空似乎才可以达到这个条件，但是这样的话如果需要从small bin取出chunk，那么就需要tcache为空，此时又无法控制tcache的数量，所以说如果仅仅是malloc的话，还是存在一定矛盾的，所以这种attack一般使用在calloc的时候。</p>
+<blockquote>
+<p>效果 &amp; 利用条件</p>
+</blockquote>
+<p>造成的结果是任意地址写一个main_arena的地址，和任意地址链接进tcache，利用条件如下</p>
+<ul>
+<li>有tcache</li>
+<li>至少有一次能够越过tcache 从small bin中取出chunk （ calloc ）</li>
+<li>有机会让chunk从<code>unsorted bin</code>中滑入<code>small bin</code></li>
+<li>可以劫持bk指针<br>
+利用之后的堆空间</li>
+</ul>
+<p><img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/image-20221123201213840.png" srcset="/img/loading.gif" lazyload alt="image-20221123201213840"></p>
+<blockquote>
+<p>利用方法</p>
+</blockquote>
+<ul>
+<li>首先填满tcache</li>
+<li>然后free两个chunk进unsorted bin，（不可以合并）</li>
+<li>然后申请一个大的chunk，把unsorted bin里面的chunk滑入small bin</li>
+<li>UAF劫持倒数第二个chunk的bk，注意这个bk是chunk头，它是要被链入tcache的。而fake_chunk指向的bk可以指向任意位置→vul_addr，该位置被认为是下一个bck，会造成vul_addr+0x10=bin</li>
+</ul>
+<h4 id="libc2-29"><a class="header-anchor" href="#libc2-29">¶</a>libc2.29</h4>
+<p>从libc2.27到2.29最明显的就是添加了<code>tcache key</code>，即改变了tcache的结构体，用于表示<code>chunk</code>是否已经在所属的<code>tcache bin</code>中，对于每个<code>chunk</code>而言，<code>key</code>在其<code>bk</code>指针的位置上。检查代码如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">__glibc_unlikely</span><span class="token punctuation">(</span>e<span class="token operator">-></span>key <span class="token operator">==</span> tcache<span class="token punctuation">)</span><span class="token punctuation">)</span>  
+<span class="token punctuation">&#123;</span>  
+    tcache_entry <span class="token operator">*</span>tmp<span class="token punctuation">;</span>  
+    <span class="token function">LIBC_PROBE</span><span class="token punctuation">(</span>memory_tcache_double_free<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> e<span class="token punctuation">,</span> tc_idx<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+    <span class="token keyword">for</span> <span class="token punctuation">(</span>tmp <span class="token operator">=</span> tcache<span class="token operator">-></span>entries<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span><span class="token punctuation">;</span> tmp<span class="token punctuation">;</span> tmp <span class="token operator">=</span> tmp<span class="token operator">-></span>next<span class="token punctuation">)</span>  
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>tmp <span class="token operator">==</span> e<span class="token punctuation">)</span>  
+        <span class="token function">malloc_printerr</span><span class="token punctuation">(</span><span class="token string">"free(): double free detected in tcache 2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>检查了<code>double free</code>，如果当时e已经有key了，且e和tcache bin的第一个chunk是一样的，则触发double free的检查，这个关键的<code>key</code>，在进行tcache_put的时候会被赋值为<code>tcache_struct</code>的地址，在<code>tcache_get</code>的时候进行清空。</p>
+<p>绕过的方法也比较简单，想办法破坏掉这个key，那么就不会进入if的条件，此时相当于可以直接double free。</p>
+<p>此外添加了一个<code>unlink</code>检查，代码如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"> <span class="token comment">/* consolidate backward */</span>  
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">prev_inuse</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>  
+    prevsize <span class="token operator">=</span> <span class="token function">prev_size</span> <span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+    size <span class="token operator">+=</span> prevsize<span class="token punctuation">;</span>  
+    p <span class="token operator">=</span> <span class="token function">chunk_at_offset</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">long</span><span class="token punctuation">)</span> prevsize<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">__glibc_unlikely</span> <span class="token punctuation">(</span><span class="token function">chunksize</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span> <span class="token operator">!=</span> prevsize<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token comment">//add  </span>
+        <span class="token function">malloc_printerr</span> <span class="token punctuation">(</span><span class="token string">"corrupted size vs. prev_size while consolidating"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//add  </span>
+    <span class="token function">unlink_chunk</span> <span class="token punctuation">(</span>av<span class="token punctuation">,</span> p<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>代码添加在<code>free</code>的时候，free操作时，会执行上面的<code>unlink</code>检查，这个检查检查了<code>pre_inuse</code>位，如果p的pre_inuse为0，即前一个chunk为free状态，那么会通过<code>pre_size</code>的大小获得前一个chunk的size，然后再发生<code>unlink</code>。在以前的版本不存在这个检查，所以可以通过<code>off_by_NULL</code>很简单的构造<code>chunk_overlap</code>，方法如下：</p>
+<h5 id="off-by-NULL利用"><a class="header-anchor" href="#off-by-NULL利用">¶</a>off_by_NULL利用</h5>
+<blockquote>
+<ul>
+<li>
+<p>malloc(0x500) 获得chunk1 malloc(0xf8) * 3 获得chunk 2 3 4</p>
+</li>
+<li>
+<p>编辑chunk 3 改变chunk 4的presize = chunk1 + chunk2 + chunk3 且覆盖chunk4的pre_inuse</p>
+</li>
+<li>
+<p>free chunk1 此时chunk1 进入unsorted bin</p>
+</li>
+<li>
+<p>free chunk4 如果没有上述检查则，chunk4和chunk1 发生unlink，把chunk1 到chunk4的所有空间吞入unsorted bin</p>
+</li>
+<li>
+<p>此时chunk2 chunk3 既存在于unsorted bin，又可以被用户使用</p>
+</li>
+</ul>
+</blockquote>
+<p>属于off_by_one比较经典的利用了。但是libc2.29在free chunk4的时候出现了size的检查，按照原来的方法，必然是不能通过检查的，所以还需要考虑另外的方法来完成利用，最简单直接的办法就是在chunk的user_data域再伪造一个chunk，这样就可以满足size的要求了。</p>
+<p>但是问题又来了，看<code>unlink</code>的代码</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token comment">/* Take a chunk off a bin list. */</span>  
+<span class="token keyword">static</span> <span class="token keyword">void</span>  
+<span class="token function">unlink_chunk</span> <span class="token punctuation">(</span>mstate av<span class="token punctuation">,</span> mchunkptr p<span class="token punctuation">)</span>  
+<span class="token punctuation">&#123;</span>  
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">chunksize</span> <span class="token punctuation">(</span>p<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token function">prev_size</span> <span class="token punctuation">(</span><span class="token function">next_chunk</span> <span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>  
+    <span class="token function">malloc_printerr</span> <span class="token punctuation">(</span><span class="token string">"corrupted size vs. prev_size"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+  mchunkptr fd <span class="token operator">=</span> p<span class="token operator">-></span>fd<span class="token punctuation">;</span>  
+  mchunkptr bk <span class="token operator">=</span> p<span class="token operator">-></span>bk<span class="token punctuation">;</span>  
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">__builtin_expect</span> <span class="token punctuation">(</span>fd<span class="token operator">-></span>bk <span class="token operator">!=</span> p <span class="token operator">||</span> bk<span class="token operator">-></span>fd <span class="token operator">!=</span> p<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// 链表里，p->前向->后向==p。  </span>
+    <span class="token function">malloc_printerr</span> <span class="token punctuation">(</span><span class="token string">"corrupted double-linked list"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>绕过了第一次检查，unlink依然要检查双向链表的完整性，此时对于这个unlink检查，考虑以下几点：</p>
+<ul>
+<li>
+<p>如果可以获得heap地址，直接伪造即可，让fd和bk都指向自己（这里的<code>fd</code>和<code>bk</code>指的是<code>fake_chunk</code>的<code>fd</code>和<code>bk</code>，自己指的是<code>fake_chunk</code>）</p>
+</li>
+<li>
+<p>没有heap base，想办法创造条件，利用heap操作残留的heap地址</p>
+</li>
+</ul>
+<p>第二点联合第一点很容易想起来<code>large bin</code>，当<code>large bin</code>中同一个index的chunk使用<code>fd_nextsize</code>和<code>bk_nextsize</code>相连接。<br>
+在没有泄露的前提下利用<code>fd_nextsize和bk_nextsize</code>两个heap指针，构造方法如下。</p>
+<h6 id="残余的heap指针（基本无法使用）"><a class="header-anchor" href="#残余的heap指针（基本无法使用）">¶</a>残余的heap指针（基本无法使用）</h6>
+<ul>
+<li>首先malloc出来一个large bin chunk，然后malloc出来，malloc出来的时候利用edit的机会，对<code>fd_nextsize</code>进行<code>partial overwrite</code>，使得该指针指向另外一个有heap指针的chunk，这时候fd_nextsize作为fake chunk的fd指针，利用另外一个有heap指针的chunk，完成了<code>fd-&gt;bk = p</code>的检查，此处注意，这个有heap指针的chunk也需要提前进行partial overwrite使得其heap指针指向p。</li>
+<li>free 一个chunk进入tcache，然后再利用off_by_one改变前面那个large bin chunk的大小，使得其为tcache大小，然后free 这个chunk，这时候，之前那个large bin chunk的fd指针，指向了这一步刚开始被free的tcache，即在large bin + 0x10的位置踩出一个heap地址</li>
+<li>最后malloc出来这个修改大小后进入tcache 的 large bin chunk，然后partial overwrite修改低位，使得+0x10位置的heap地址指向p，从而绕过bk-&gt;fd = p的检查</li>
+</ul>
+<p>过程极为繁琐，且<strong>不实用</strong>，在后来的版本（<font color="#ff0000">glibc2.29</font>），出现了tcache的key机制，导致fake_chunk的size会在踩出heap地址的时候被key覆盖，所以方法需要改到<code>fast bin</code>中执行，这是限制条件之一，限制条件之二是，很多的输入要求中，会在输入的末尾输入<code>\x00和\n</code>，这导致了partial overwrite会失败，或者说需要爆破。</p>
+<p>所以以上的方法现在基本上都无法使用。现在用的几乎都是下面的方法。</p>
+<h6 id="unsorted-bin和large-bin的链机制"><a class="header-anchor" href="#unsorted-bin和large-bin的链机制">¶</a>unsorted bin和large bin的链机制</h6>
+<p>这种方法我是从NepCTF中学来的，NepCTF中由Nep战队的FMYY师傅出了一道题，<strong>NULL_FXCK</strong>，这道题的解法多样，且对堆的构造要求极高，比赛中仅有cnitlrt师傅完成，是一道很有意思的题目（风沐云烟yyds）</p>
+<p>在参考wjh师傅的博客之后，当时算是完善了一块短板，那时候从来没有在高版本的libc下尝试过off_by_one的构造。</p>
+<p>首先讲常规的利用large bin链子的打法，这种方法是需要<font color="#ff0000">爆破</font>的，具体<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_45209963/article/details/126758789">链接</a>，在我看来本质上的区别不是很多，主要是换了unsorted bin打，但是在使用的复杂度上不低于上面的方法，只是unsorted bin比fastbin简单，最后的partial overwrite时，因为需要覆盖两位，所以对于第二个字节的高4bit是无法控制的，这就需要爆破，概率为1/16。</p>
+<p>然后讲的是一种不需要爆破的方法，<strong>这种方法不依赖于large bin</strong>，而是单纯的利用unsorted bin和heap在合并和分割的时候残留的heap指针。<br>
+篇幅有限，具体可以看下面的文章：<br>
+<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_45209963/article/details/126758789">https://blog.csdn.net/weixin_45209963/article/details/126758789</a><br>
+<a target="_blank" rel="noopener" href="https://blog.wjhwjhn.com/archives/193/">https://blog.wjhwjhn.com/archives/193/</a></p>
+<hr>
+<p>除了以上的检查之外，还添加了top chunk的检查，防护住了house of force的攻击，同时，unlink由一个宏，变成了一个专门的函数，添加了双链完整性的检查，使得unsorted bin attack变得无法使用，所以在高版本中，一般使用large bin attack 替代unsorted bin attack。</p>
+<h4 id="libc2-31"><a class="header-anchor" href="#libc2-31">¶</a>libc2.31</h4>
+<p>该版本中，对large bin的fd_nextsize和bk_nextsize做了限制，普通的构造large bin attack的办法已经失效，但是如下的payload Demo还能够使用</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c">p1 <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span><span class="token number">0x4a8</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">malloc</span><span class="token punctuation">(</span><span class="token number">0x18</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p2 <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span><span class="token number">0x478</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">malloc</span><span class="token punctuation">(</span><span class="token number">0x18</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">free</span><span class="token punctuation">(</span>p1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// trigger chunk1 into largebin</span>
+<span class="token function">malloc</span><span class="token punctuation">(</span><span class="token number">0x600</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">free</span><span class="token punctuation">(</span>p2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span><span class="token class-name">uint64_t</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>p1<span class="token operator">+</span><span class="token number">0x18</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">uint64_t</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>victim<span class="token punctuation">)</span><span class="token operator">-</span><span class="token number">0x20</span><span class="token punctuation">;</span>
+
+<span class="token comment">// largebin attack</span>
+<span class="token function">malloc</span><span class="token punctuation">(</span><span class="token number">0x68</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>之后相比于2.29没有做比较大的更新，基本上保护机制都一样，这里主要是介绍几种经典的利用方法，平时也算比较少见的。<br>
+该版本下主要利用的方法如下：<br>
+tcache stash unlink 全家桶 #House_of_botcake #fastbin_reverse_into_tcache<br>
+以上的三种方法均可以利用在libc2.29版本，或者说适用于tcache版本。<br>
+tcache 的stash机制前面介绍过了，这里主要提一下botcake的利用方法。（fastbin的利用方法和stash机制类似，不过感觉有点鸡肋）</p>
+<h5 id="house-of-botcake"><a class="header-anchor" href="#house-of-botcake">¶</a>house of botcake</h5>
+<p>这是一种在UAF的条件下的利用，主要适用于，存在UAF但是没有edit的办法，即只能够在malloc之后马上edit，而不可以单独的执行edit。<br>
+条件：</p>
+<ul>
+<li>有tcache</li>
+<li>可以UAf<br>
+利用的本质是，同一个chunk进行两次free导致chunk分别位于unsorted bin和tcache，由于位于<code>unsorted bin</code>中的chunk没有key，所以绕过了<code>tcache bin</code>的检查。<br>
+利用过程：</li>
+<li>填满tcache bin，free chunk1 chunk2，此时chunk1和2进入了unsorted bin，且要保证1 和 2相邻，进入unsorted bin之后二者合并</li>
+<li>malloc出来一个chunk3，此时再次free chunk2 ，这时候chunk2进入tcache bin，那么chunk2 既在unsorted bin中又在tcache中</li>
+<li>malloc一个chunk，使得unsorted bin分割，且能够获得chunk2 user data区域的控制权，如此，就可以劫持fd指针了。</li>
+</ul>
+<p><strong>补充</strong>： 有时候，题目会对malloc的大小做限制，我们仅仅需要一次小的malloc 才能够达到上面的条件。</p>
+<h4 id="libc2-32"><a class="header-anchor" href="#libc2-32">¶</a>libc2.32</h4>
+<p>这个版本下的方法可以关注 <code>VNCTF2021</code> 这场比赛中大部分的pwn题都是2.32的版本。<br>
+2.32和2.31的主要区别在于，tcache又做了一次安全加强，tcache_put代码如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token comment">/* Caller must ensure that we know tc_idx is valid and there's room
+   for more chunks.  */</span>
+<span class="token keyword">static</span> __always_inline <span class="token keyword">void</span>
+<span class="token function">tcache_put</span> <span class="token punctuation">(</span>mchunkptr chunk<span class="token punctuation">,</span> <span class="token class-name">size_t</span> tc_idx<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+  tcache_entry <span class="token operator">*</span>e <span class="token operator">=</span> <span class="token punctuation">(</span>tcache_entry <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token function">chunk2mem</span> <span class="token punctuation">(</span>chunk<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment">/* Mark this chunk as "in the tcache" so the test in _int_free will
+     detect a double free.  */</span>
+  e<span class="token operator">-></span>key <span class="token operator">=</span> tcache<span class="token punctuation">;</span>
+
+  e<span class="token operator">-></span>next <span class="token operator">=</span> <span class="token function">PROTECT_PTR</span> <span class="token punctuation">(</span><span class="token operator">&amp;</span>e<span class="token operator">-></span>next<span class="token punctuation">,</span> tcache<span class="token operator">-></span>entries<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  tcache<span class="token operator">-></span>entries<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span> <span class="token operator">=</span> e<span class="token punctuation">;</span>
+  <span class="token operator">++</span><span class="token punctuation">(</span>tcache<span class="token operator">-></span>counts<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">/* Caller must ensure that we know tc_idx is valid and there's
+   available chunks to remove.  */</span>
+<span class="token keyword">static</span> __always_inline <span class="token keyword">void</span> <span class="token operator">*</span>
+<span class="token function">tcache_get</span> <span class="token punctuation">(</span><span class="token class-name">size_t</span> tc_idx<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+  tcache_entry <span class="token operator">*</span>e <span class="token operator">=</span> tcache<span class="token operator">-></span>entries<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">__glibc_unlikely</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">aligned_OK</span> <span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">malloc_printerr</span> <span class="token punctuation">(</span><span class="token string">"malloc(): unaligned tcache chunk detected"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  tcache<span class="token operator">-></span>entries<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">REVEAL_PTR</span> <span class="token punctuation">(</span>e<span class="token operator">-></span>next<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token operator">--</span><span class="token punctuation">(</span>tcache<span class="token operator">-></span>counts<span class="token punctuation">[</span>tc_idx<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  e<span class="token operator">-></span>key <span class="token operator">=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token punctuation">)</span> e<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>改变如下：</p>
+<ul>
+<li>tcache_get函数中，对取出的chunk做了堆地址对齐的检查</li>
+<li>对next指针添加了加密和解密检查</li>
+</ul>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment">#define PROTECT_PTR(pos, ptr) \</span>
+  <span class="token punctuation">(</span><span class="token punctuation">(</span>__typeof <span class="token punctuation">(</span>ptr<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> pos<span class="token punctuation">)</span> <span class="token operator">>></span> <span class="token number">12</span><span class="token punctuation">)</span> <span class="token operator">^</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>size_t<span class="token punctuation">)</span> ptr<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment">#define REVEAL_PTR(ptr)  PROTECT_PTR (&amp;ptr, ptr)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>即，next指针存储的是原来的值右移12位，然后和自己的地址异或之后的值，这意味着，对fd进行劫持从而任意写的前提是，已经leak了heap地址。给传统的利用方法增加了不少难度。</p>
+<blockquote>
+<p>不过若是我们能够直接控制 <code>tcache struct</code>，则仍然可以直接进行任意地址写，这是因为在 tcache struct 中存放的仍是未经异或运算的原始 chunk 地址</p>
+</blockquote>
+<p>针对新的保护方法，同样的也有新的利用方法，不难发现，当第一个chunk进入tcache的时候，自己的next存储的是NULL，这时候也会进行异或，异或之后得到的值就直接是自己的地址，当有UAF的时候，就可以直接leak出来heap地址了。</p>
+<h4 id="libc2-34"><a class="header-anchor" href="#libc2-34">¶</a>libc2.34</h4>
+<p>没啥好说的，目前来看，主流方法都是打IO，Hook的去除导致很多传统的方法都没了作用。</p>
+<p>House of emma</p>
+<h2 id="others"><a class="header-anchor" href="#others">¶</a>others</h2>
+<p>了解了各个版本中添加的保护之后，也不一定能够解决大部分的堆题目，因为在每个题中的限制条件不一样，在不同的条件下构造的堆利用方法不同。</p>
+<p>利用方法目前比较出名的是how2heap的一系列利用方式，其中的house of 系列的利用方式较为多样，可以多做学习，这里不一一介绍，除此之外，还有一些很有意思的trick，比如说对<code>environ</code>环境变量的攻击，<code>global_max_fast</code>的利用，还有VN2021中出现的<a target="_blank" rel="noopener" href="https://blog.wjhwjhn.com/archives/192/">LittleReadFlower</a>，修改<code>TCACHE_MAX_BINS</code>。。。。</p>
+<p>攻击利用方法层出不穷，这里也无法完全记录，总结下来就是百无禁忌，只要能想到的方法，都可以利用起来。文章到此结束，exploit从未停止。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/CTF/" class="category-chain-item">CTF</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/heap/">#heap</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>堆利用回顾</div>
+      <div>http://example.com/2022/11/22/堆利用回顾/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Epiphany</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年11月22日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/18/web%E4%B8%AD%E4%B8%80%E4%BA%9B%E7%AE%80%E5%8D%95%E7%9A%84php%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96%E5%92%8Cjs%E5%8E%9F%E5%9E%8B%E9%93%BE%E6%B1%A1%E6%9F%93/" title="web中一些简单的php反序列化和js原型链污染">
+                        <span class="hidden-mobile">web中一些简单的php反序列化和js原型链污染</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.4.17/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"QC4vvYPEM2BYGMlNkxfbdllW-gzGzoHsz","appKey":"nsnNub648pvsc3yts6pFQY1A","path":"window.location.pathname","placeholder":"留言叭","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"https://qc4vvype.lc-cn-n1-shared.com","emojiCDN":null,"emojiMaps":null,"enableQQ":true},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> <div style="font-size: 0.85rem"> <span id="website-duration">载入网站运行时间...</span> <script src="/js/duration.js"></script> </div>   
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script  src="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.js" ></script>
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
