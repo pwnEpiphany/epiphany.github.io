@@ -1,0 +1,882 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/head.png">
+  <link rel="icon" href="/img/head.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Epiphany">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="AFL概述 AFL是一款优秀的模糊测试工具，基于传统的fuzz模式，AFL使用遗传算法来完成种子的变异，从而获得更多的畸形输入。 Fuzzing的核心是在无穷多个输入空间里去寻找有限的输入，去触发漏洞，那需要怎么在无穷空间里去做有限的探索呢？它用到了遗传算法。下图中间的核心循环，通过一轮一轮的迭代测试，测试过程中它会把上一轮测试比较好的测试用例留下来，作为种子进入下一轮，下一轮是在上一轮比较好的种">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AFL(一)---基础知识">
+<meta property="og:url" content="http://example.com/2022/12/15/AFL-%E4%B8%80-%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/index.html">
+<meta property="og:site_name" content="Epiphany&#39;s blog">
+<meta property="og:description" content="AFL概述 AFL是一款优秀的模糊测试工具，基于传统的fuzz模式，AFL使用遗传算法来完成种子的变异，从而获得更多的畸形输入。 Fuzzing的核心是在无穷多个输入空间里去寻找有限的输入，去触发漏洞，那需要怎么在无穷空间里去做有限的探索呢？它用到了遗传算法。下图中间的核心循环，通过一轮一轮的迭代测试，测试过程中它会把上一轮测试比较好的测试用例留下来，作为种子进入下一轮，下一轮是在上一轮比较好的种">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221202202401.png">
+<meta property="article:published_time" content="2022-12-15T07:20:42.000Z">
+<meta property="article:modified_time" content="2022-12-16T00:21:07.565Z">
+<meta property="article:author" content="Epiphany">
+<meta property="article:tag" content="AFL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221202202401.png">
+  
+  
+  
+  <title>AFL(一)---基础知识 - Epiphany&#39;s blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+  
+<link rel="stylesheet" href="/css/test.css">
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":70,"cursorChar":"😊","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"syTAHbVDGa0ZSug10p7Z9QM4-gzGzoHsz","app_key":"BDZY8j2r1l97VE3uLcsrU2Vd","server_url":"https://sytahbvd.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Epiphany&#39;s blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" target="_self" href="javascript:;" role="button"
+                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CTF">
+                    
+                    CTF
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/CVE">
+                    
+                    CVE
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/others">
+                    
+                    others
+                  </a>
+                
+                  
+                  
+                  
+                  <a class="dropdown-item" href="/categories/chats">
+                    
+                    chats
+                  </a>
+                
+              </div>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221202202401.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="AFL(一)---基础知识"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-12-15 15:20" pubdate>
+          星期四, 十二月 15日 2022, 3:20 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          <!-- compatible with older versions-->
+          3.3k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          <!-- compatible with older versions-->
+          28 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">AFL(一)---基础知识</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1>AFL概述</h1>
+<p>AFL是一款优秀的模糊测试工具，基于传统的fuzz模式，AFL使用<code>遗传算法</code>来完成种子的变异，从而获得更多的畸形输入。</p>
+<p>Fuzzing的核心是在无穷多个输入空间里去寻找有限的输入，去触发漏洞，那需要怎么在无穷空间里去做有限的探索呢？它用到了遗传算法。下图中间的核心循环，通过一轮一轮的迭代测试，测试过程中它会把上一轮测试比较好的测试用例留下来，作为种子进入下一轮，下一轮是在上一轮比较好的种子基础上进一步变异测试。它在无穷空间中探索时，不是盲目的去探索，而是在上一轮探索基础上去找比较好的方向，接着再这个方向上往下探索。<br>
+<img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221202202401.png" srcset="/img/loading.gif" lazyload alt=""><br>
+一般的fuzz思想如图，seed pool负责提供种子，种子经过变异之后作为测试样例进行测试，然后将结果形成crash报告。</p>
+<p>而AFL在以上做出了一些改变，通过插桩来收集代码覆盖率，并且将代码覆盖率作为一个指标，代码覆盖率越高，意味着模糊测试的覆盖面越完全，如果一个测试用例能够提高代码覆盖率，这个case将会被作为测试用例保存下来，这样就可以不断地提高代码覆盖率。<br>
+<img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221202211346.png" srcset="/img/loading.gif" lazyload alt=""></p>
+<p>实际上AFL在过程的每一步都有一些策略，比如<code>Select seed</code>，怎么变异（<code>Mulate Seed</code>），测试过程中怎么跟踪覆盖率，覆盖率怎么过滤保留新的种子（<code>Fliter Seeds</code>），AFL在这些过程中提出的算法都算比较有效，改变了大家在这一块的研究：</p>
+<ul>
+<li><font color="#ff0000">Evolving</font>：filter out only GOOD samples contributing to code coverage</li>
+<li><font color="#ff0000">Scalable</font>：mutation-based, few knowledge required</li>
+<li><font color="#ff0000">Fast</font>：fork-server, persistent, parallel</li>
+<li><font color="#ff0000">Sensitive</font>: support different sanitizers to catch security violations<br>
+一些原理就不多说了，现在还有很多基于AFL的优化fuzz器，都发表了论文，可以关注。下面是针对AFL的学习。</li>
+</ul>
+<h1>week1</h1>
+<h2 id="名词"><a class="header-anchor" href="#名词">¶</a>名词</h2>
+<ul>
+<li>
+<p>代码覆盖率<br>
+代码覆盖率如字面意思，就是度量代码覆盖程度的一个变量，指的是源代码中的某行代码是否执行，二进制代码理解为汇编代码是否执行。计算的方式很多，但无论是<code>GCC</code>的<code>GCOV</code>还是<code>LLVM</code>的<code>SanitizerCoverage</code>，都提供函数（function）、基本快（basic-block）、边界（edge）三种级别的覆盖率检测，<a target="_blank" rel="noopener" href="https://clang.llvm.org/docs/SanitizerCoverage.html">LLVM文档</a>中有更加具体的细节。</p>
+</li>
+<li>
+<p>基本块<br>
+basic-block缩写为BB，这个比较好理解，打开ida，汇编代码分在同一个块的就是一个基本块，基本快中的第一条代码执行后，后续代码也都会被执行，其中的所有代码执行次数是一样的。<br>
+一个基本快满足以下的特点。</p>
+</li>
+<li>
+<p>只有一个入口点，BB中的指令不是任何<strong>跳转指令</strong>的目标。</p>
+</li>
+<li>
+<p>只有一个退出点，只有最后一条指令使执行流程转移到另一个BB<br>
+<img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221204203608.png" srcset="/img/loading.gif" lazyload alt="|500"><br>
+如上图代码可以被分为四个代码块：</p>
+</li>
+</ul>
+<figure><div class="code-wrapper"><pre class="line-numbers language-none"><code class="language-none">.....
+
+if(x+y&gt;z) 以上包括这一行都是第一个
+------------------以下为第二个
+y &#x3D; x
+x++
+------------------以下为第三个
+y &#x3D; z
+z++
+------------------第四个
+w &#x3D; x +z
+return 0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<ul>
+<li>
+<p>边 Edge<br>
+AFL的<a target="_blank" rel="noopener" href="http://lcamtuf.coredump.cx/afl/technical_details.txt">技术白皮书</a>中提到fuzzer通过插桩代码捕获边（edge）覆盖率。边的概念和块类似，简单来说边用来连接块，将程序视为一个CFG流程图，块为节点，edge连接节点，记录节点之间的跳转，知道了块和边的执行次数，就可以计算出代码的覆盖率。<br>
+由此获得的覆盖率比BB的记录方法更加细致。</p>
+</li>
+<li>
+<p>元组</p>
+</li>
+</ul>
+<blockquote>
+<p>具体到AFL计算覆盖率的方法中，使用二元组(branch_src, branch_dst)来记录<strong>当前基本块</strong> + <strong>前一基本块</strong> 的信息，从而获取目标的执行流程和代码覆盖情况，伪代码如下：</p>
+</blockquote>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c">cur_location <span class="token operator">=</span> <span class="token operator">&lt;</span>COMPILE_TIME_RANDOM<span class="token operator">></span><span class="token punctuation">;</span>            <span class="token comment">//用一个随机数标记当前基本块</span>
+shared_mem<span class="token punctuation">[</span>cur_location <span class="token operator">^</span> prev_location<span class="token punctuation">]</span><span class="token operator">++</span><span class="token punctuation">;</span>        <span class="token comment">//将当前块和前一块异或保存到shared_mem[]</span>
+prev_location <span class="token operator">=</span> cur_location <span class="token operator">>></span> <span class="token number">1</span><span class="token punctuation">;</span>                <span class="token comment">//cur_location右移1位区分从当前块到当前块的转跳</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>具体的实现还需要后面分析代码。<br>
+实际插入的汇编代码，如下图所示，首先保存各种寄存器的值并设置ecx/rcx，然后调用<code>__afl_maybe_log</code>，这个方法的内容相当复杂，这里就不展开讲了，但其主要功能就和上面的伪代码相似，用于记录覆盖率，放入一块共享内存（程序和fuzzer是不同的进程，同时记录改变覆盖率需要使用共享内存）。<br>
+<img src="https://fortypra.oss-cn-hangzhou.aliyuncs.com/img/20221204204653.png" srcset="/img/loading.gif" lazyload alt=""><br>
+看图中，每个代码的中间插入了一个函数，AFL通过劫持汇编器，在编译程序的时候进行插桩，通过alf-gcc等实现。</p>
+<p>clang的实现似乎和上面有点区别。</p>
+<ul>
+<li>
+<p>clang内置</p>
+<ul>
+<li>llvm计算出一个edge集合，每条edge对应一个guard指针</li>
+</ul>
+</li>
+<li>
+<p>GCOV和LCOV</p>
+<ul>
+<li>主要是程序员统计代码覆盖率使用，优点是可视化，并不为fuzzer使用</li>
+</ul>
+</li>
+<li>
+<p>覆盖率反馈，遗传算法</p>
+<ul>
+<li>达到的局部最优解，fuzz分为生成式 fuzz，一开始没有种子，根据自己的逻辑不断生成输入，但是没有反馈，没有变异，只是根据生成器生成输入，相对于变异fuzz较差，但是变异fuzz比较依赖 变异策略和种子，所以变异fuzz通常在这两点进行改进。</li>
+</ul>
+</li>
+<li>
+<p>fork server机制（不通用）</p>
+<ul>
+<li>fuzzer生成变异样本之后，会把输入的样本输入到一个隐藏的文件，<code>.cur_input</code></li>
+<li>通过管道，fuzzer会通知fork server进行一次fuzz，fork server会fork一个子进程去执行这个文件，并通过管道返回子进程的执行结果，通知fuzzer。<br>
+fork server即为被fuzz的程序，这个机制会让被fuzz的程序（例如是v8），v8会卡在第一条语句执行之前，然后fork一个新的进程来执行这个v8，然后将程序的执行信息返回给 fuzzer。</li>
+</ul>
+</li>
+<li>
+<p>通过调试AFL，更加了解AFL</p>
+</li>
+</ul>
+<figure><div class="code-wrapper"><pre class="line-numbers language-c" data-language="c"><code class="language-c"><span class="token operator">-</span>i
+<span class="token operator">/</span>home<span class="token operator">/</span>tamako<span class="token operator">/</span>Desktop<span class="token operator">/</span>FUZZ<span class="token operator">/</span>AFL_debug<span class="token operator">/</span>fuzz_in
+<span class="token operator">-</span>o
+<span class="token operator">/</span>home<span class="token operator">/</span>tamako<span class="token operator">/</span>Desktop<span class="token operator">/</span>FUZZ<span class="token operator">/</span>AFL_debug<span class="token operator">/</span>fuzz_out
+<span class="token operator">-</span>m
+none
+<span class="token operator">-</span>t
+<span class="token number">500</span><span class="token operator">+</span>
+<span class="token operator">--</span>
+<span class="token operator">/</span>home<span class="token operator">/</span>tamako<span class="token operator">/</span>Desktop<span class="token operator">/</span>FUZZ<span class="token operator">/</span>AFL_debug<span class="token operator">/</span>fuzzbuild
+@@<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre></div></figure>
+<p>调试参数如上，-m为最大内存，-t为超时时间 – 作为分隔，fuzzbuild为调试程序，@@设置标准读入文件，即为前面的<code>.cur_input</code>，如果不加入则会从标准输入中读取输入，不会从cur_input里面读取。</p>
+<ul>
+<li>魔改AFL的方法
+<ul>
+<li>改变mutate 只用覆盖率反馈和crash捕获</li>
+<li>写入testcase之前， 对内容进行封装和变异</li>
+<li>afl+ fuzz结构化目标 （菜单题 sql）</li>
+<li>白名单插桩
+<ul>
+<li>再实现一个alf-gcc的包装器，这个包会对自己所感兴趣的文件插桩，不感兴趣的不插桩。（最简单的实现 根据路径指定）</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="Thinking"><a class="header-anchor" href="#Thinking">¶</a>Thinking</h2>
+<p>如何使用AFL FUZZ clent-server模式的程序，或者使用AFL fuzz网络协议？</p>
+<ul>
+<li>有比AFL更好的方案和工具来做这件事，有哪些好的其他工具? <a target="_blank" rel="noopener" href="https://www.fastly.com/blog/how-fuzz-server-american-fuzzy-lop">https://www.fastly.com/blog/how-fuzz-server-american-fuzzy-lop</a></li>
+<li>用afl直接启动server程序，patch server程序接收请求包的代码，改为直接从 标准输入里读取，server执行足够多次请求后退出，AFL再启动一个新的 server再次fuzz，这个结合上我的afl源码全注释的persistent mode部分看。</li>
+<li>其他做法，需要修改很多部分，首先要破坏掉fork server机制，然后包括管道，共 享内存，插桩和启动目标程序的方式都可能要修改，需要非常理解AFL的机制，和 善于解耦和替代。</li>
+</ul>
+<p>AFL不适合这类程序的fuzz</p>
+<ul>
+<li>进程外fuzz（AFL）和进程间fuzz的区别？优缺点？<br>
+进程间的fuzz指的是fuzzer和被fuzz的程序是一个程序，即fuzzer插入了被fuzz进程。</li>
+</ul>
+<p>进程间fuzz速度很快，但是遇到crash之类的错误，进程会直接崩溃，然后就需要重新启动进程。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/CVE/" class="category-chain-item">CVE</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/AFL/">#AFL</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>AFL(一)---基础知识</div>
+      <div>http://example.com/2022/12/15/AFL-一-基础知识/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Epiphany</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年12月15日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/12/15/AFL-%E4%BA%8C-%E7%BC%96%E8%AF%91%E5%92%8C%E6%8F%92%E6%A1%A9%E5%88%86%E6%9E%90/" title="AFL(二)---编译和插桩分析">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">AFL(二)---编译和插桩分析</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/12/12/%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E7%9A%84%E4%B8%80%E4%BA%9B%E5%A5%87%E7%89%B9%E5%88%A9%E7%94%A8/" title="环境变量的一些奇特利用">
+                        <span class="hidden-mobile">环境变量的一些奇特利用</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.4.17/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"QC4vvYPEM2BYGMlNkxfbdllW-gzGzoHsz","appKey":"nsnNub648pvsc3yts6pFQY1A","path":"window.location.pathname","placeholder":"留言叭","avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"https://qc4vvype.lc-cn-n1-shared.com","emojiCDN":null,"emojiMaps":null,"enableQQ":true},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> <div style="font-size: 0.85rem"> <span id="website-duration">载入网站运行时间...</span> <script src="/js/duration.js"></script> </div>   
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script  src="https://lib.baomitu.com/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.js" ></script>
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
